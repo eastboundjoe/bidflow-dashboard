@@ -469,7 +469,6 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // Configuration
         const CONFIG = {
             GOOGLE_API_KEY: 'AIzaSyAl3vMZM_kXq1RB1Jhk_5P3_NrOHnXCTyQ',
             GOOGLE_DRIVE_FOLDER_ID: '1MZEl4NUwIq-ObppjNdK3qnRR7XFitdrA',
@@ -491,11 +490,9 @@
             const chartRef = useRef(null);
             const chartInstance = useRef(null);
 
-            // Fetch list of weekly sheets from Google Drive
             useEffect(() => {
                 fetchWeeklySheets();
                 
-                // Set up auto-refresh
                 const interval = setInterval(() => {
                     if (currentSheet) {
                         fetchSheetData(currentSheet.id);
@@ -529,7 +526,6 @@
 
                     setWeeklySheets(sheets);
 
-                    // Auto-select most recent week
                     if (sheets.length > 0) {
                         const mostRecent = sheets[0];
                         setCurrentSheet(mostRecent);
@@ -550,7 +546,6 @@
 
             const fetchSheetData = async (sheetId) => {
                 try {
-                    // Fetch from the "USA" sheet tab
                     const response = await fetch(
                         `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/USA!A:W?` +
                         `key=${CONFIG.GOOGLE_API_KEY}`
@@ -569,7 +564,6 @@
                         return;
                     }
 
-                    // Parse CSV-style data from Google Sheets
                     const headers = rows[0];
                     const parsedData = rows.slice(1).map(row => {
                         const obj = {};
@@ -613,7 +607,6 @@
                     });
                 }
 
-                // Custom sorting: Group by campaign, then order placements
                 filtered = [...filtered].sort((a, b) => {
                     if (sortConfig.key && sortConfig.key !== 'Campaign' && sortConfig.key !== 'Placement Type') {
                         let aVal = a[sortConfig.key];
@@ -736,45 +729,28 @@
                                 type: 'linear',
                                 display: true,
                                 position: 'left',
-                                grid: {
-                                    color: '#1f2937'
-                                },
+                                grid: { color: '#1f2937' },
                                 ticks: {
                                     color: '#00ff94',
-                                    font: {
-                                        family: 'JetBrains Mono',
-                                        size: 9
-                                    },
-                                    callback: function(value) {
-                                        return '$' + value.toFixed(0);
-                                    }
+                                    font: { family: 'JetBrains Mono', size: 9 },
+                                    callback: function(value) { return '$' + value.toFixed(0); }
                                 }
                             },
                             y1: {
                                 type: 'linear',
                                 display: true,
                                 position: 'right',
-                                grid: {
-                                    drawOnChartArea: false,
-                                },
+                                grid: { drawOnChartArea: false },
                                 ticks: {
                                     color: '#0095ff',
-                                    font: {
-                                        family: 'JetBrains Mono',
-                                        size: 9
-                                    }
+                                    font: { family: 'JetBrains Mono', size: 9 }
                                 }
                             },
                             x: {
-                                grid: {
-                                    color: '#1f2937'
-                                },
+                                grid: { color: '#1f2937' },
                                 ticks: {
                                     color: '#9ca3af',
-                                    font: {
-                                        family: 'JetBrains Mono',
-                                        size: 9
-                                    }
+                                    font: { family: 'JetBrains Mono', size: 9 }
                                 }
                             }
                         }
@@ -782,21 +758,14 @@
                 });
             };
 
-            const calculateStats = () => {
-                const totalSpend7 = filteredData.reduce((sum, row) => 
-                    sum + parseFloat(row['Spend-7'] || 0), 0);
-                const totalSpend30 = filteredData.reduce((sum, row) => 
-                    sum + parseFloat(row['Spend-30'] || 0), 0);
-                const totalClicks7 = filteredData.reduce((sum, row) => 
-                    sum + parseFloat(row['Clicks-7'] || 0), 0);
-                const totalOrders7 = filteredData.reduce((sum, row) => 
-                    sum + parseFloat(row['Orders-7'] || 0), 0);
+            const stats = (() => {
+                const totalSpend7 = filteredData.reduce((sum, row) => sum + parseFloat(row['Spend-7'] || 0), 0);
+                const totalSpend30 = filteredData.reduce((sum, row) => sum + parseFloat(row['Spend-30'] || 0), 0);
+                const totalClicks7 = filteredData.reduce((sum, row) => sum + parseFloat(row['Clicks-7'] || 0), 0);
+                const totalOrders7 = filteredData.reduce((sum, row) => sum + parseFloat(row['Orders-7'] || 0), 0);
                 const cvr7 = totalClicks7 > 0 ? (totalOrders7 / totalClicks7 * 100) : 0;
-
                 return { totalSpend7, totalSpend30, totalClicks7, totalOrders7, cvr7 };
-            };
-
-            const stats = calculateStats();
+            })();
 
             const getUniquePortfolios = () => {
                 const portfolios = [...new Set(reports.map(r => r.Portfolio))].filter(Boolean);
@@ -829,15 +798,13 @@
             };
 
             const formatPercent = (value) => {
-                if (typeof value === 'string' && value.includes('%')) {
-                    return value;
-                }
-                return `${(value || 0).toFixed(2)}%`;
+                if (typeof value === 'string' && value.includes('%')) return value;
+                return `${(parseFloat(value) || 0).toFixed(2)}%`;
             };
 
             const handleChangeEdit = (index, newValue) => {
                 const updatedReports = [...reports];
-                const dataIndex = reports.findIndex((item, i) => 
+                const dataIndex = reports.findIndex((item) => 
                     item.Campaign === filteredData[index].Campaign && 
                     item['Placement Type'] === filteredData[index]['Placement Type']
                 );
@@ -853,14 +820,10 @@
                 setEditingCell(null);
             };
 
-            const handleCellClick = (index) => {
-                setEditingCell(index);
-            };
+            const handleCellClick = (index) => setEditingCell(index);
+            const handleCampaignClick = (index) => setEditingCell('campaign-' + index);
 
-            const handleCampaignClick = (index) => {
-                setEditingCell('campaign-' + index);
-            };
-
+            // EDITED FUNCTION TO FIX CORS Handshake
             const handleSubmitChanges = async () => {
                 const changesData = reports.filter(row => 
                     row['Changes in placement'] && row['Changes in placement'] !== '-' && row['Changes in placement'].trim() !== ''
@@ -884,11 +847,12 @@
 
                 try {
                     setSubmitting(true);
-                    
                     const response = await fetch(CONFIG.N8N_WEBHOOK_URL, {
                         method: 'POST',
+                        mode: 'cors', // Explicitly enable CORS mode
                         headers: {
                             'Content-Type': 'application/json',
+                            'Accept': 'application/json'
                         },
                         body: JSON.stringify({
                             changes: changesData,
@@ -898,17 +862,17 @@
                     });
 
                     if (!response.ok) {
-                        throw new Error('Failed to submit changes to n8n');
+                        const errorText = await response.text();
+                        throw new Error(`Server responded with ${response.status}: ${errorText}`);
                     }
 
                     const result = await response.json();
-                    
-                    alert(`✅ Successfully submitted ${changesData.length} changes!\n\nCheck n8n for processing status.`);
+                    alert(`✅ Successfully submitted ${changesData.length} changes!`);
                     console.log('Submission result:', result);
                     
                 } catch (error) {
                     console.error('Error submitting changes:', error);
-                    alert(`❌ Error submitting changes: ${error.message}\n\nCheck console for details.`);
+                    alert(`❌ Connection Error: Ensure n8n is active and CORS is configured.\n\nDetail: ${error.message}`);
                 } finally {
                     setSubmitting(false);
                 }
@@ -917,14 +881,9 @@
             const getTrendArrow = (value30d, value7d, isACoS = false) => {
                 const val30 = parseFloat(value30d) || 0;
                 const val7 = parseFloat(value7d) || 0;
-                
                 if (val30 === 0) return null;
-                
                 const diff = val7 - val30;
-                const percentChange = Math.abs(diff);
-                
-                if (percentChange < 3) return null;
-                
+                if (Math.abs(diff) < 3) return null;
                 if (isACoS) {
                     if (diff < -3) return <span style={{color: 'var(--accent-primary)', fontSize: '0.9rem', marginLeft: '2px'}}>↓</span>;
                     if (diff > 3) return <span style={{color: 'var(--accent-danger)', fontSize: '0.9rem', marginLeft: '2px'}}>↑</span>;
@@ -932,7 +891,6 @@
                     if (diff > 3) return <span style={{color: 'var(--accent-primary)', fontSize: '0.9rem', marginLeft: '2px'}}>↑</span>;
                     if (diff < -3) return <span style={{color: 'var(--accent-danger)', fontSize: '0.9rem', marginLeft: '2px'}}>↓</span>;
                 }
-                
                 return null;
             };
 
@@ -973,13 +931,7 @@
                                         <select
                                             value={currentSheet?.id || ''}
                                             onChange={(e) => handleWeekChange(e.target.value)}
-                                            style={{
-                                                minWidth: '200px',
-                                                fontSize: '0.9rem',
-                                                padding: '0.5rem 1rem',
-                                                fontFamily: 'JetBrains Mono, monospace',
-                                                fontWeight: '700'
-                                            }}
+                                            style={{ minWidth: '200px', fontSize: '0.9rem', padding: '0.5rem 1rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: '700' }}
                                         >
                                             {weeklySheets.map(sheet => (
                                                 <option key={sheet.id} value={sheet.id}>
@@ -996,9 +948,7 @@
                             <div className="upload-zone">
                                 <div className="upload-icon">📊</div>
                                 <h3>No Data Available</h3>
-                                <p style={{color: 'var(--text-secondary)', marginTop: '0.5rem'}}>
-                                    Waiting for weekly reports in Google Drive...
-                                </p>
+                                <p style={{color: 'var(--text-secondary)', marginTop: '0.5rem'}}>Waiting for weekly reports in Google Drive...</p>
                             </div>
                         ) : (
                             <>
@@ -1073,24 +1023,24 @@
                                                     <th onClick={() => handleSort('Campaign')}>Campaign</th>
                                                     <th onClick={() => handleSort('Placement Type')}>Place</th>
                                                     <th onClick={() => handleSort('Budget')}>Budget</th>
-                                                    <th onClick={() => handleSort('Clicks-30')} style={{whiteSpace: 'normal'}}>Clicks<br/>30d</th>
-                                                    <th onClick={() => handleSort('Spend-30')} style={{whiteSpace: 'normal'}}>Spend<br/>30d</th>
-                                                    <th onClick={() => handleSort('Orders-30')} style={{whiteSpace: 'normal'}}>Orders<br/>30d</th>
-                                                    <th onClick={() => handleSort('CVR-30')} style={{whiteSpace: 'normal'}}>CVR<br/>30d</th>
-                                                    <th onClick={() => handleSort('ACoS-30')} style={{whiteSpace: 'normal'}}>ACoS<br/>30d</th>
-                                                    <th onClick={() => handleSort('Clicks-7')} style={{whiteSpace: 'normal'}}>Clicks<br/>7d</th>
-                                                    <th onClick={() => handleSort('Spend-7')} style={{whiteSpace: 'normal'}}>Spend<br/>7d</th>
-                                                    <th onClick={() => handleSort('Orders-7')} style={{whiteSpace: 'normal'}}>Orders<br/>7d</th>
-                                                    <th onClick={() => handleSort('CVR-7')} style={{whiteSpace: 'normal'}}>CVR<br/>7d</th>
-                                                    <th onClick={() => handleSort('ACOS-7')} style={{whiteSpace: 'normal'}}>ACoS<br/>7d</th>
-                                                    <th onClick={() => handleSort('Spent DB Yesterday')} style={{whiteSpace: 'normal'}}>DB<br/>Yest</th>
-                                                    <th onClick={() => handleSort('Spent Yesterday')} style={{whiteSpace: 'normal'}}>Spent<br/>Yest</th>
-                                                    <th onClick={() => handleSort('Budget Check')} style={{whiteSpace: 'normal'}}>Budget<br/>Check</th>
-                                                    <th onClick={() => handleSort('Last 30 days')} style={{whiteSpace: 'normal'}}>%<br/>30d</th>
-                                                    <th onClick={() => handleSort('Last 7 days')} style={{whiteSpace: 'normal'}}>%<br/>7d</th>
-                                                    <th onClick={() => handleSort('Yesterday')} style={{whiteSpace: 'normal'}}>%<br/>Yest</th>
-                                                    <th onClick={() => handleSort('Increase bids by placement')} style={{whiteSpace: 'normal'}}>Multi<br/>plier</th>
-                                                    <th onClick={() => handleSort('Changes in placement')} style={{whiteSpace: 'normal'}}>Changes</th>
+                                                    <th onClick={() => handleSort('Clicks-30')}>Clicks<br/>30d</th>
+                                                    <th onClick={() => handleSort('Spend-30')}>Spend<br/>30d</th>
+                                                    <th onClick={() => handleSort('Orders-30')}>Orders<br/>30d</th>
+                                                    <th onClick={() => handleSort('CVR-30')}>CVR<br/>30d</th>
+                                                    <th onClick={() => handleSort('ACoS-30')}>ACoS<br/>30d</th>
+                                                    <th onClick={() => handleSort('Clicks-7')}>Clicks<br/>7d</th>
+                                                    <th onClick={() => handleSort('Spend-7')}>Spend<br/>7d</th>
+                                                    <th onClick={() => handleSort('Orders-7')}>Orders<br/>7d</th>
+                                                    <th onClick={() => handleSort('CVR-7')}>CVR<br/>7d</th>
+                                                    <th onClick={() => handleSort('ACOS-7')}>ACoS<br/>7d</th>
+                                                    <th onClick={() => handleSort('Spent DB Yesterday')}>DB<br/>Yest</th>
+                                                    <th onClick={() => handleSort('Spent Yesterday')}>Spent<br/>Yest</th>
+                                                    <th onClick={() => handleSort('Budget Check')}>Budget<br/>Check</th>
+                                                    <th onClick={() => handleSort('Last 30 days')}>%<br/>30d</th>
+                                                    <th onClick={() => handleSort('Last 7 days')}>%<br/>7d</th>
+                                                    <th onClick={() => handleSort('Yesterday')}>%<br/>Yest</th>
+                                                    <th onClick={() => handleSort('Increase bids by placement')}>Multi<br/>plier</th>
+                                                    <th onClick={() => handleSort('Changes in placement')}>Changes</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -1103,107 +1053,39 @@
                                                         <tr key={index} className={isNewCampaignGroup ? 'campaign-group-separator' : ''}>
                                                             <td style={{maxWidth: '150px'}}>
                                                                 {editingCell === 'campaign-' + index ? (
-                                                                    <div
-                                                                        onClick={() => setEditingCell(null)}
-                                                                        style={{
-                                                                            whiteSpace: 'normal',
-                                                                            wordBreak: 'break-word',
-                                                                            cursor: 'pointer',
-                                                                            background: 'rgba(0, 255, 148, 0.1)',
-                                                                            padding: '0.25rem',
-                                                                            borderRadius: '4px'
-                                                                        }}
-                                                                        title="Click to collapse"
-                                                                    >
+                                                                    <div onClick={() => setEditingCell(null)} style={{ whiteSpace: 'normal', wordBreak: 'break-word', cursor: 'pointer', background: 'rgba(0, 255, 148, 0.1)', padding: '0.25rem', borderRadius: '4px' }}>
                                                                         {row.Campaign}
                                                                     </div>
                                                                 ) : (
-                                                                    <div
-                                                                        onClick={() => handleCampaignClick(index)}
-                                                                        style={{
-                                                                            overflow: 'hidden',
-                                                                            textOverflow: 'ellipsis',
-                                                                            whiteSpace: 'nowrap',
-                                                                            cursor: 'pointer'
-                                                                        }}
-                                                                        title="Click to expand"
-                                                                    >
+                                                                    <div onClick={() => handleCampaignClick(index)} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                                                                         {row.Campaign}
                                                                     </div>
                                                                 )}
                                                             </td>
-                                                            <td style={{minWidth: '60px'}}>
-                                                                {getPlacementBadge(row['Placement Type'])}
-                                                            </td>
+                                                            <td style={{minWidth: '60px'}}>{getPlacementBadge(row['Placement Type'])}</td>
                                                             <td>{row.Budget || '-'}</td>
                                                             <td className="metric-group-30d">{row['Clicks-30'] || 0}</td>
-                                                            <td className="metric-group-30d" style={{whiteSpace: 'nowrap'}}>{formatCurrency(row['Spend-30'])}</td>
+                                                            <td className="metric-group-30d">{formatCurrency(row['Spend-30'])}</td>
                                                             <td className="metric-group-30d">{row['Orders-30'] || 0}</td>
-                                                            <td className={'metric-group-30d ' + (parseFloat(row['CVR-30']) > 5 ? 'metric-positive' : '')}>
-                                                                {formatPercent(row['CVR-30'])}
-                                                            </td>
-                                                            <td className={'metric-group-30d ' + (parseFloat(row['ACoS-30']) > 30 ? 'metric-negative' : 'metric-positive')}>
-                                                                {formatPercent(row['ACoS-30'])}
-                                                            </td>
+                                                            <td className={'metric-group-30d ' + (parseFloat(row['CVR-30']) > 5 ? 'metric-positive' : '')}>{formatPercent(row['CVR-30'])}</td>
+                                                            <td className={'metric-group-30d ' + (parseFloat(row['ACoS-30']) > 30 ? 'metric-negative' : 'metric-positive')}>{formatPercent(row['ACoS-30'])}</td>
                                                             <td className="metric-group-7d">{row['Clicks-7'] || 0}</td>
-                                                            <td className="metric-group-7d" style={{whiteSpace: 'nowrap'}}>{formatCurrency(row['Spend-7'])}</td>
+                                                            <td className="metric-group-7d">{formatCurrency(row['Spend-7'])}</td>
                                                             <td className="metric-group-7d">{row['Orders-7'] || 0}</td>
-                                                            <td className={'metric-group-7d ' + (parseFloat(row['CVR-7']) > 5 ? 'metric-positive' : '')}>
-                                                                {formatPercent(row['CVR-7'])}
-                                                                {getTrendArrow(row['CVR-30'], row['CVR-7'], false)}
-                                                            </td>
-                                                            <td className={'metric-group-7d ' + (parseFloat(row['ACOS-7']) > 30 ? 'metric-negative' : 'metric-positive')}>
-                                                                {formatPercent(row['ACOS-7'])}
-                                                                {getTrendArrow(row['ACoS-30'], row['ACOS-7'], true)}
-                                                            </td>
+                                                            <td className={'metric-group-7d ' + (parseFloat(row['CVR-7']) > 5 ? 'metric-positive' : '')}>{formatPercent(row['CVR-7'])}{getTrendArrow(row['CVR-30'], row['CVR-7'], false)}</td>
+                                                            <td className={'metric-group-7d ' + (parseFloat(row['ACOS-7']) > 30 ? 'metric-negative' : 'metric-positive')}>{formatPercent(row['ACOS-7'])}{getTrendArrow(row['ACoS-30'], row['ACOS-7'], true)}</td>
                                                             <td>{formatCurrency(row['Spent DB Yesterday'])}</td>
                                                             <td>{formatCurrency(row['Spent Yesterday'])}</td>
                                                             <td>{row['Budget Check'] || '-'}</td>
                                                             <td>{formatPercent(row['Last 30 days'])}</td>
                                                             <td>{formatPercent(row['Last 7 days'])}</td>
                                                             <td>{formatPercent(row['Yesterday'])}</td>
-                                                            <td>
-                                                                {multiplier ? (
-                                                                    <span className="multiplier">{multiplier}%</span>
-                                                                ) : '-'}
-                                                            </td>
-                                                            <td style={{maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                                                            <td>{multiplier ? (<span className="multiplier">{multiplier}%</span>) : '-'}</td>
+                                                            <td style={{maxWidth: '70px'}}>
                                                                 {editingCell === index ? (
-                                                                    <input
-                                                                        type="text"
-                                                                        defaultValue={(row['Changes in placement'] || '').toString().replace('%', '')}
-                                                                        onBlur={(e) => handleChangeEdit(index, e.target.value)}
-                                                                        onKeyDown={(e) => {
-                                                                            if (e.key === 'Enter') {
-                                                                                handleChangeEdit(index, e.target.value);
-                                                                            } else if (e.key === 'Escape') {
-                                                                                setEditingCell(null);
-                                                                            }
-                                                                        }}
-                                                                        autoFocus
-                                                                        placeholder="Enter number"
-                                                                        style={{
-                                                                            width: '100%',
-                                                                            background: 'var(--bg-dark)',
-                                                                            border: '1px solid var(--accent-primary)',
-                                                                            color: 'var(--text-primary)',
-                                                                            padding: '0.25rem',
-                                                                            borderRadius: '4px',
-                                                                            fontSize: '0.75rem'
-                                                                        }}
-                                                                    />
+                                                                    <input type="text" defaultValue={(row['Changes in placement'] || '').toString().replace('%', '')} onBlur={(e) => handleChangeEdit(index, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleChangeEdit(index, e.target.value); else if (e.key === 'Escape') setEditingCell(null); }} autoFocus style={{ width: '100%', background: 'var(--bg-dark)', border: '1px solid var(--accent-primary)', color: 'var(--text-primary)', padding: '0.25rem', borderRadius: '4px', fontSize: '0.75rem' }} />
                                                                 ) : (
-                                                                    <span
-                                                                        onClick={() => handleCellClick(index)}
-                                                                        style={{
-                                                                            cursor: 'pointer',
-                                                                            display: 'block',
-                                                                            padding: '0.25rem'
-                                                                        }}
-                                                                        title="Click to edit"
-                                                                    >
-                                                                        {row['Changes in placement'] || '-'}
-                                                                    </span>
+                                                                    <span onClick={() => handleCellClick(index)} style={{ cursor: 'pointer', display: 'block', padding: '0.25rem' }}>{row['Changes in placement'] || '-'}</span>
                                                                 )}
                                                             </td>
                                                         </tr>
