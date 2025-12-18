@@ -366,9 +366,19 @@
             font-weight: 500;
         }
 
+        .acos-30d-bg {
+            background: rgba(255, 99, 132, 0.15); /* Light red for ACoS 30d */
+        }
+
+        .acos-7d-bg {
+            background: rgba(54, 162, 235, 0.15); /* Light blue for ACoS 7d */
+        }
+
         tbody tr:hover .metric-group-30d,
         tbody tr:hover .metric-group-7d,
-        tbody tr:hover .metric-percent-group {
+        tbody tr:hover .metric-percent-group,
+        tbody tr:hover .acos-30d-bg,
+        tbody tr:hover .acos-7d-bg {
             background: var(--bg-hover);
         }
 
@@ -1040,12 +1050,12 @@
                                                     <th onClick={() => handleSort('Clicks-30')}>Clicks<br/>30d</th>
                                                     <th onClick={() => handleSort('Spend-30')}>Spend<br/>30d</th>
                                                     <th onClick={() => handleSort('Orders-30')}>Orders<br/>30d</th>
-                                                    <th onClick={() => handleSort('CVR-30')}>CVR<br/>30d</th>
+                                                    <th className="metric-group-30d" onClick={() => handleSort('CVR-30')}>CVR<br/>30d</th>
                                                     <th onClick={() => handleSort('ACoS-30')}>ACoS<br/>30d</th>
-                                                    <th onClick={() => handleSort('Clicks-7')}>Clicks<br/>7d</th>
-                                                    <th onClick={() => handleSort('Spend-7')}>Spend<br/>7d</th>
-                                                    <th onClick={() => handleSort('Orders-7')}>Orders<br/>7d</th>
-                                                    <th onClick={() => handleSort('CVR-7')}>CVR<br/>7d</th>
+                                                    <th className="metric-group-7d" onClick={() => handleSort('Clicks-7')}>Clicks<br/>7d</th>
+                                                    <th className="metric-group-7d" onClick={() => handleSort('Spend-7')}>Spend<br/>7d</th>
+                                                    <th className="metric-group-7d" onClick={() => handleSort('Orders-7')}>Orders<br/>7d</th>
+                                                    <th className="metric-group-7d" onClick={() => handleSort('CVR-7')}>CVR<br/>7d</th>
                                                     <th onClick={() => handleSort('ACOS-7')}>ACoS<br/>7d</th>
                                                     <th onClick={() => handleSort('Spent DB Yesterday')}>DB<br/>Yest</th>
                                                     <th onClick={() => handleSort('Spent Yesterday')}>Spent<br/>Yest</th>
@@ -1082,12 +1092,12 @@
                                                             <td className="metric-group-30d">{formatCurrency(row['Spend-30'])}</td>
                                                             <td className="metric-group-30d">{row['Orders-30'] || 0}</td>
                                                             <td className={'metric-group-30d ' + (parseFloat(row['CVR-30']) > 5 ? 'metric-positive' : '')}>{formatPercent(row['CVR-30'])}</td>
-                                                            <td className={'metric-group-30d ' + (parseFloat(row['ACoS-30']) > 30 ? 'metric-negative' : 'metric-positive')}>{formatPercent(row['ACoS-30'])}</td>
+                                                            <td className={'acos-30d-bg metric-group-30d ' + (parseFloat(row['ACoS-30']) > 30 ? 'metric-negative' : 'metric-positive')}>{formatPercent(row['ACoS-30'])}</td>
                                                             <td className="metric-group-7d">{row['Clicks-7'] || 0}</td>
                                                             <td className="metric-group-7d">{formatCurrency(row['Spend-7'])}</td>
                                                             <td className="metric-group-7d">{row['Orders-7'] || 0}</td>
                                                             <td className={'metric-group-7d ' + (parseFloat(row['CVR-7']) > 5 ? 'metric-positive' : '')}>{formatPercent(row['CVR-7'])}{getTrendArrow(row['CVR-30'], row['CVR-7'], false)}</td>
-                                                            <td className={'metric-group-7d ' + (parseFloat(row['ACOS-7']) > 30 ? 'metric-negative' : 'metric-positive')}>{formatPercent(row['ACOS-7'])}{getTrendArrow(row['ACoS-30'], row['ACOS-7'], true)}</td>
+                                                            <td className={'acos-7d-bg metric-group-7d ' + (parseFloat(row['ACOS-7']) > 30 ? 'metric-negative' : 'metric-positive')}>{formatPercent(row['ACOS-7'])}{getTrendArrow(row['ACoS-30'], row['ACoS-7'], true)}</td>
                                                             <td>{formatCurrency(row['Spent DB Yesterday'])}</td>
                                                             <td>{formatCurrency(row['Spent Yesterday'])}</td>
                                                             <td>{row['Budget Check'] || '-'}</td>
