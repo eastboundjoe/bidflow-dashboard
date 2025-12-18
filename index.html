@@ -50,7 +50,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image:
+            background-image: 
                 linear-gradient(var(--border) 1px, transparent 1px),
                 linear-gradient(90deg, var(--border) 1px, transparent 1px);
             background-size: 50px 50px;
@@ -472,7 +472,7 @@
         const CONFIG = {
             GOOGLE_API_KEY: 'AIzaSyAl3vMZM_kXq1RB1Jhk_5P3_NrOHnXCTyQ',
             GOOGLE_DRIVE_FOLDER_ID: '1MZEl4NUwIq-ObppjNdK3qnRR7XFitdrA',
-            N8N_WEBHOOK_URL: 'https://n8n.bidflow.app/webhook/481801ae-ca24-4b0c-9a85-43fe438dfa1b',
+            N8N_WEBHOOK_URL: 'https://n8n.bidflow.app/webhook/placement-updates',
             AUTO_REFRESH_INTERVAL: 300000 // 5 minutes
         };
 
@@ -492,7 +492,7 @@
 
             useEffect(() => {
                 fetchWeeklySheets();
-
+                
                 const interval = setInterval(() => {
                     if (currentSheet) {
                         fetchSheetData(currentSheet.id);
@@ -596,7 +596,7 @@
                     filtered = filtered.filter(row => {
                         const campaign = (row.Campaign || '').toLowerCase();
                         const portfolio = (row.Portfolio || '').toLowerCase();
-                        return campaign.includes(searchTerm.toLowerCase()) ||
+                        return campaign.includes(searchTerm.toLowerCase()) || 
                                portfolio.includes(searchTerm.toLowerCase());
                     });
                 }
@@ -614,7 +614,7 @@
 
                         if (typeof aVal === 'string') aVal = aVal.toLowerCase();
                         if (typeof bVal === 'string') bVal = bVal.toLowerCase();
-
+                        
                         if (aVal === null || aVal === undefined) aVal = 0;
                         if (bVal === null || bVal === undefined) bVal = 0;
 
@@ -624,7 +624,7 @@
 
                     const campaignA = (a.Campaign || '').toLowerCase();
                     const campaignB = (b.Campaign || '').toLowerCase();
-
+                    
                     if (campaignA !== campaignB) {
                         return campaignA.localeCompare(campaignB);
                     }
@@ -665,13 +665,13 @@
                 }
 
                 const ctx = chartRef.current.getContext('2d');
-
+                
                 const placementData = {};
                 filteredData.forEach(row => {
                     const placement = row['Placement Type'] || 'Unknown';
                     const spend = parseFloat(row['Spend-7'] || 0);
                     const clicks = parseFloat(row['Clicks-7'] || 0);
-
+                    
                     if (!placementData[placement]) {
                         placementData[placement] = { spend: 0, clicks: 0 };
                     }
@@ -804,11 +804,11 @@
 
             const handleChangeEdit = (index, newValue) => {
                 const updatedReports = [...reports];
-                const dataIndex = reports.findIndex((item) =>
-                    item.Campaign === filteredData[index].Campaign &&
+                const dataIndex = reports.findIndex((item) => 
+                    item.Campaign === filteredData[index].Campaign && 
                     item['Placement Type'] === filteredData[index]['Placement Type']
                 );
-
+                
                 if (dataIndex !== -1) {
                     let cleanValue = newValue.trim();
                     if (cleanValue && !isNaN(cleanValue)) {
@@ -823,8 +823,9 @@
             const handleCellClick = (index) => setEditingCell(index);
             const handleCampaignClick = (index) => setEditingCell('campaign-' + index);
 
+            // EDITED FUNCTION TO FIX CORS Handshake
             const handleSubmitChanges = async () => {
-                const changesData = reports.filter(row =>
+                const changesData = reports.filter(row => 
                     row['Changes in placement'] && row['Changes in placement'] !== '-' && row['Changes in placement'].trim() !== ''
                 ).map(row => ({
                     campaign: row.Campaign,
@@ -848,7 +849,7 @@
                     setSubmitting(true);
                     const response = await fetch(CONFIG.N8N_WEBHOOK_URL, {
                         method: 'POST',
-                        mode: 'cors',
+                        mode: 'cors', // Explicitly enable CORS mode
                         headers: {
                             'Content-Type': 'application/json',
                             'Accept': 'application/json'
@@ -856,9 +857,7 @@
                         body: JSON.stringify({
                             changes: changesData,
                             timestamp: new Date().toISOString(),
-                            week: currentSheet?.weekNumber || 'Unknown',
-                            sheetId: currentSheet?.id || '',
-                            sheetName: currentSheet?.name || ''
+                            week: currentSheet?.weekNumber || 'Unknown'
                         })
                     });
 
@@ -868,25 +867,9 @@
                     }
 
                     const result = await response.json();
-
-                    // Build detailed success message
-                    let successMessage = `✅ Successfully Updated!\n\n`;
-                    successMessage += `Campaign: ${result.campaignName}\n`;
-                    successMessage += `Week: ${result.week}\n`;
-                    successMessage += `Total Changes: ${result.totalChanges}\n\n`;
-                    successMessage += `Changes Applied:\n`;
-
-                    result.changes.forEach(change => {
-                        const placementName = change.placement
-                            .replace('PLACEMENT_', '')
-                            .replace('SITE_AMAZON_', '')
-                            .replace(/_/g, ' ');
-                        successMessage += `  • ${placementName}: ${change.oldMultiplier}% → ${change.newMultiplier}%\n`;
-                    });
-
-                    alert(successMessage);
+                    alert(`✅ Successfully submitted ${changesData.length} changes!`);
                     console.log('Submission result:', result);
-
+                    
                 } catch (error) {
                     console.error('Error submitting changes:', error);
                     alert(`❌ Connection Error: Ensure n8n is active and CORS is configured.\n\nDetail: ${error.message}`);
@@ -1063,9 +1046,9 @@
                                             <tbody>
                                                 {filteredData.slice(0, 200).map((row, index) => {
                                                     const multiplier = row['Increase bids by placement'];
-                                                    const isNewCampaignGroup = index > 0 &&
+                                                    const isNewCampaignGroup = index > 0 && 
                                                         filteredData[index - 1].Campaign !== row.Campaign;
-
+                                                    
                                                     return (
                                                         <tr key={index} className={isNewCampaignGroup ? 'campaign-group-separator' : ''}>
                                                             <td style={{maxWidth: '150px'}}>
@@ -1091,8 +1074,8 @@
                                                             <td className="metric-group-7d">{row['Orders-7'] || 0}</td>
                                                             <td className={'metric-group-7d ' + (parseFloat(row['CVR-7']) > 5 ? 'metric-positive' : '')}>{formatPercent(row['CVR-7'])}{getTrendArrow(row['CVR-30'], row['CVR-7'], false)}</td>
                                                             <td className={'metric-group-7d ' + (parseFloat(row['ACOS-7']) > 30 ? 'metric-negative' : 'metric-positive')}>{formatPercent(row['ACOS-7'])}{getTrendArrow(row['ACoS-30'], row['ACOS-7'], true)}</td>
-                                                            <td>{formatCurrency(row['Spent DB Yesterday'])}</td>
-                                                            <td>{formatCurrency(row['Spent Yesterday'])}</td>
+                                                            <td>{formatPercent(row['Spent DB Yesterday'])}</td>
+                                                            <td>{formatPercent(row['Spent Yesterday'])}</td>
                                                             <td>{row['Budget Check'] || '-'}</td>
                                                             <td>{formatPercent(row['Last 30 days'])}</td>
                                                             <td>{formatPercent(row['Last 7 days'])}</td>
