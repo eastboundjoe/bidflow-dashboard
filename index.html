@@ -5,13 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BidFlow - Placement Optimizer</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin
-src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+San
-s:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-dark: #0a0e15;
@@ -474,8 +472,7 @@ s:wght@400;500;700&display=swap" rel="stylesheet">
         const CONFIG = {
             GOOGLE_API_KEY: 'AIzaSyAl3vMZM_kXq1RB1Jhk_5P3_NrOHnXCTyQ',
             GOOGLE_DRIVE_FOLDER_ID: '1MZEl4NUwIq-ObppjNdK3qnRR7XFitdrA',
-            N8N_WEBHOOK_URL: '
-https://n8n.bidflow.app/webhook/481801ae-ca24-4b0c-9a85-43fe438dfa1b',
+            N8N_WEBHOOK_URL: 'https://n8n.bidflow.app/webhook/481801ae-ca24-4b0c-9a85-43fe438dfa1b',
             AUTO_REFRESH_INTERVAL: 300000 // 5 minutes
         };
 
@@ -510,8 +507,7 @@ https://n8n.bidflow.app/webhook/481801ae-ca24-4b0c-9a85-43fe438dfa1b',
                     setLoading(true);
                     const response = await fetch(
                         `https://www.googleapis.com/drive/v3/files?` +
-                        `q='${CONFIG.GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+mimeType='application
-/vnd.google-apps.spreadsheet'` +
+                        `q='${CONFIG.GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+mimeType='application/vnd.google-apps.spreadsheet'` +
                         `&key=${CONFIG.GOOGLE_API_KEY}` +
                         `&fields=files(id,name)` +
                         `&orderBy=name desc`
@@ -551,8 +547,7 @@ https://n8n.bidflow.app/webhook/481801ae-ca24-4b0c-9a85-43fe438dfa1b',
             const fetchSheetData = async (sheetId) => {
                 try {
                     const response = await fetch(
-                        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/USA!A:W?`
- +
+                        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/USA!A:W?` +
                         `key=${CONFIG.GOOGLE_API_KEY}`
                     );
 
@@ -613,8 +608,7 @@ https://n8n.bidflow.app/webhook/481801ae-ca24-4b0c-9a85-43fe438dfa1b',
                 }
 
                 filtered = [...filtered].sort((a, b) => {
-                    if (sortConfig.key && sortConfig.key !== 'Campaign' && sortConfig.key !==
-'Placement Type') {
+                    if (sortConfig.key && sortConfig.key !== 'Campaign' && sortConfig.key !== 'Placement Type') {
                         let aVal = a[sortConfig.key];
                         let bVal = b[sortConfig.key];
 
@@ -739,7 +733,7 @@ https://n8n.bidflow.app/webhook/481801ae-ca24-4b0c-9a85-43fe438dfa1b',
                                 ticks: {
                                     color: '#00ff94',
                                     font: { family: 'JetBrains Mono', size: 9 },
-                                    callback: function(value) { return ' + value.toFixed(0); }
+                                    callback: function(value) { return '$' + value.toFixed(0); }
                                 }
                             },
                             y1: {
@@ -765,14 +759,10 @@ https://n8n.bidflow.app/webhook/481801ae-ca24-4b0c-9a85-43fe438dfa1b',
             };
 
             const stats = (() => {
-                const totalSpend7 = filteredData.reduce((sum, row) => sum +
-parseFloat(row['Spend-7'] || 0), 0);
-                const totalSpend30 = filteredData.reduce((sum, row) => sum +
-parseFloat(row['Spend-30'] || 0), 0);
-                const totalClicks7 = filteredData.reduce((sum, row) => sum +
-parseFloat(row['Clicks-7'] || 0), 0);
-                const totalOrders7 = filteredData.reduce((sum, row) => sum +
-parseFloat(row['Orders-7'] || 0), 0);
+                const totalSpend7 = filteredData.reduce((sum, row) => sum + parseFloat(row['Spend-7'] || 0), 0);
+                const totalSpend30 = filteredData.reduce((sum, row) => sum + parseFloat(row['Spend-30'] || 0), 0);
+                const totalClicks7 = filteredData.reduce((sum, row) => sum + parseFloat(row['Clicks-7'] || 0), 0);
+                const totalOrders7 = filteredData.reduce((sum, row) => sum + parseFloat(row['Orders-7'] || 0), 0);
                 const cvr7 = totalClicks7 > 0 ? (totalOrders7 / totalClicks7 * 100) : 0;
                 return { totalSpend7, totalSpend30, totalClicks7, totalOrders7, cvr7 };
             })();
@@ -785,8 +775,7 @@ parseFloat(row['Orders-7'] || 0), 0);
             const handleSort = (key) => {
                 setSortConfig(prevConfig => ({
                     key,
-                    direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' :
- 'asc'
+                    direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
                 }));
             };
 
@@ -795,8 +784,7 @@ parseFloat(row['Orders-7'] || 0), 0);
                 if (p.includes('top')) return <span className="badge badge-top">TOP</span>;
                 if (p.includes('product')) return <span className="badge badge-pp">PP</span>;
                 if (p.includes('rest')) return <span className="badge badge-ros">ROS</span>;
-                if (p.includes('business')) return <span className="badge
-badge-business">BIZ</span>;
+                if (p.includes('business')) return <span className="badge badge-business">BIZ</span>;
                 return null;
             };
 
@@ -835,11 +823,9 @@ badge-business">BIZ</span>;
             const handleCellClick = (index) => setEditingCell(index);
             const handleCampaignClick = (index) => setEditingCell('campaign-' + index);
 
-            // EDITED FUNCTION TO FIX CORS Handshake
             const handleSubmitChanges = async () => {
                 const changesData = reports.filter(row =>
-                    row['Changes in placement'] && row['Changes in placement'] !== '-' &&
-row['Changes in placement'].trim() !== ''
+                    row['Changes in placement'] && row['Changes in placement'] !== '-' && row['Changes in placement'].trim() !== ''
                 ).map(row => ({
                     campaign: row.Campaign,
                     portfolio: row.Portfolio,
@@ -850,13 +836,11 @@ row['Changes in placement'].trim() !== ''
                 }));
 
                 if (changesData.length === 0) {
-                    alert('No changes to submit. Add multiplier percentages in the Changes column
-first.');
+                    alert('No changes to submit. Add multiplier percentages in the Changes column first.');
                     return;
                 }
 
-                if (!confirm(`Submit ${changesData.length} placement changes to Amazon Ads API?`))
- {
+                if (!confirm(`Submit ${changesData.length} placement changes to Amazon Ads API?`)) {
                     return;
                 }
 
@@ -864,7 +848,7 @@ first.');
                     setSubmitting(true);
                     const response = await fetch(CONFIG.N8N_WEBHOOK_URL, {
                         method: 'POST',
-                        mode: 'cors', // Explicitly enable CORS mode
+                        mode: 'cors',
                         headers: {
                             'Content-Type': 'application/json',
                             'Accept': 'application/json'
@@ -882,13 +866,28 @@ first.');
                     }
 
                     const result = await response.json();
-                    alert(`✅ Successfully submitted ${changesData.length} changes!`);
+
+                    // Build detailed success message
+                    let successMessage = `✅ Successfully Updated!\n\n`;
+                    successMessage += `Campaign: ${result.campaignName}\n`;
+                    successMessage += `Week: ${result.week}\n`;
+                    successMessage += `Total Changes: ${result.totalChanges}\n\n`;
+                    successMessage += `Changes Applied:\n`;
+
+                    result.changes.forEach(change => {
+                        const placementName = change.placement
+                            .replace('PLACEMENT_', '')
+                            .replace('SITE_AMAZON_', '')
+                            .replace(/_/g, ' ');
+                        successMessage += `  • ${placementName}: ${change.oldMultiplier}% → ${change.newMultiplier}%\n`;
+                    });
+
+                    alert(successMessage);
                     console.log('Submission result:', result);
 
                 } catch (error) {
                     console.error('Error submitting changes:', error);
-                    alert(`❌ Connection Error: Ensure n8n is active and CORS is
-configured.\n\nDetail: ${error.message}`);
+                    alert(`❌ Connection Error: Ensure n8n is active and CORS is configured.\n\nDetail: ${error.message}`);
                 } finally {
                     setSubmitting(false);
                 }
@@ -901,15 +900,11 @@ configured.\n\nDetail: ${error.message}`);
                 const diff = val7 - val30;
                 if (Math.abs(diff) < 3) return null;
                 if (isACoS) {
-                    if (diff < -3) return <span style={{color: 'var(--accent-primary)', fontSize:
-'0.9rem', marginLeft: '2px'}}>↓</span>;
-                    if (diff > 3) return <span style={{color: 'var(--accent-danger)', fontSize:
-'0.9rem', marginLeft: '2px'}}>↑</span>;
+                    if (diff < -3) return <span style={{color: 'var(--accent-primary)', fontSize: '0.9rem', marginLeft: '2px'}}>↓</span>;
+                    if (diff > 3) return <span style={{color: 'var(--accent-danger)', fontSize: '0.9rem', marginLeft: '2px'}}>↑</span>;
                 } else {
-                    if (diff > 3) return <span style={{color: 'var(--accent-primary)', fontSize:
-'0.9rem', marginLeft: '2px'}}>↑</span>;
-                    if (diff < -3) return <span style={{color: 'var(--accent-danger)', fontSize:
-'0.9rem', marginLeft: '2px'}}>↓</span>;
+                    if (diff > 3) return <span style={{color: 'var(--accent-primary)', fontSize: '0.9rem', marginLeft: '2px'}}>↑</span>;
+                    if (diff < -3) return <span style={{color: 'var(--accent-danger)', fontSize: '0.9rem', marginLeft: '2px'}}>↓</span>;
                 }
                 return null;
             };
@@ -938,24 +933,20 @@ configured.\n\nDetail: ${error.message}`);
                     <div className="bg-grid"></div>
                     <div className="content">
                         <header>
-                            <div style={{display: 'flex', justifyContent: 'space-between',
-alignItems: 'center', flexWrap: 'wrap', gap: '1rem'}}>
+                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'}}>
                                 <div>
                                     <h1>Placement Optimizer</h1>
                                     <p className="subtitle">Bid Multiplier Analysis Dashboard</p>
                                 </div>
                                 {weeklySheets.length > 0 && (
-                                    <div style={{display: 'flex', flexDirection: 'column', gap:
-'0.5rem', alignItems: 'flex-end'}}>
-                                        <label style={{fontSize: '0.75rem', color:
-'var(--text-secondary)', fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase'}}>
+                                    <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end'}}>
+                                        <label style={{fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase'}}>
                                             Select Week
                                         </label>
                                         <select
                                             value={currentSheet?.id || ''}
                                             onChange={(e) => handleWeekChange(e.target.value)}
-                                            style={{ minWidth: '200px', fontSize: '0.9rem',
-padding: '0.5rem 1rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: '700' }}
+                                            style={{ minWidth: '200px', fontSize: '0.9rem', padding: '0.5rem 1rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: '700' }}
                                         >
                                             {weeklySheets.map(sheet => (
                                                 <option key={sheet.id} value={sheet.id}>
@@ -972,33 +963,27 @@ padding: '0.5rem 1rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: '70
                             <div className="upload-zone">
                                 <div className="upload-icon">📊</div>
                                 <h3>No Data Available</h3>
-                                <p style={{color: 'var(--text-secondary)', marginTop:
-'0.5rem'}}>Waiting for weekly reports in Google Drive...</p>
+                                <p style={{color: 'var(--text-secondary)', marginTop: '0.5rem'}}>Waiting for weekly reports in Google Drive...</p>
                             </div>
                         ) : (
                             <>
                                 <div className="stats-grid">
                                     <div className="stat-card">
                                         <div className="stat-label">Spend (7d)</div>
-                                        <div
-className="stat-value">{formatCurrency(stats.totalSpend7)}</div>
-                                        <div className="stat-detail">30d:
-{formatCurrency(stats.totalSpend30)}</div>
+                                        <div className="stat-value">{formatCurrency(stats.totalSpend7)}</div>
+                                        <div className="stat-detail">30d: {formatCurrency(stats.totalSpend30)}</div>
                                     </div>
                                     <div className="stat-card">
                                         <div className="stat-label">Clicks (7d)</div>
                                         <div className="stat-value">{stats.totalClicks7}</div>
-                                        <div className="stat-detail">{stats.totalOrders7}
-orders</div>
+                                        <div className="stat-detail">{stats.totalOrders7} orders</div>
                                     </div>
                                     <div className="stat-card">
                                         <div className="stat-label">CVR (7d)</div>
-                                        <div className="stat-value" style={{color: stats.cvr7 > 5
-? 'var(--accent-primary)' : 'var(--accent-warning)'}}>
+                                        <div className="stat-value" style={{color: stats.cvr7 > 5 ? 'var(--accent-primary)' : 'var(--accent-warning)'}}>
                                             {formatPercent(stats.cvr7)}
                                         </div>
-                                        <div className="stat-detail">{filteredData.length}
-placements</div>
+                                        <div className="stat-detail">{filteredData.length} placements</div>
                                     </div>
                                     <div className="stat-card">
                                         <div className="stat-label">Current Week</div>
@@ -1006,21 +991,18 @@ placements</div>
                                             {currentSheet?.weekNumber || 'N/A'}
                                         </div>
                                         <div className="stat-detail">
-                                            {[...new Set(filteredData.map(r =>
-r.Campaign))].length} campaigns
+                                            {[...new Set(filteredData.map(r => r.Campaign))].length} campaigns
                                         </div>
                                     </div>
                                 </div>
 
-                                <div style={{marginBottom: '1.5rem', display: 'flex',
-justifyContent: 'flex-end'}}>
+                                <div style={{marginBottom: '1.5rem', display: 'flex', justifyContent: 'flex-end'}}>
                                     <button
                                         onClick={handleSubmitChanges}
                                         disabled={submitting}
                                         className="btn"
                                     >
-                                        {submitting ? '⏳ Submitting...' : '🚀 Submit Changes to
-Amazon'}
+                                        {submitting ? '⏳ Submitting...' : '🚀 Submit Changes to Amazon'}
                                     </button>
                                 </div>
 
@@ -1040,8 +1022,7 @@ Amazon'}
                                             />
                                             <select
                                                 value={portfolioFilter}
-                                                onChange={(e) =>
-setPortfolioFilter(e.target.value)}
+                                                onChange={(e) => setPortfolioFilter(e.target.value)}
                                             >
                                                 <option value="all">All Portfolios</option>
                                                 {getUniquePortfolios().map(p => (
@@ -1054,130 +1035,72 @@ setPortfolioFilter(e.target.value)}
                                         <table>
                                             <thead>
                                                 <tr>
-                                                    <th onClick={() =>
-handleSort('Campaign')}>Campaign</th>
-                                                    <th onClick={() => handleSort('Placement
-Type')}>Place</th>
-                                                    <th onClick={() =>
-handleSort('Budget')}>Budget</th>
-                                                    <th onClick={() =>
-handleSort('Clicks-30')}>Clicks<br/>30d</th>
-                                                    <th onClick={() =>
-handleSort('Spend-30')}>Spend<br/>30d</th>
-                                                    <th onClick={() =>
-handleSort('Orders-30')}>Orders<br/>30d</th>
-                                                    <th onClick={() =>
-handleSort('CVR-30')}>CVR<br/>30d</th>
-                                                    <th onClick={() =>
-handleSort('ACoS-30')}>ACoS<br/>30d</th>
-                                                    <th onClick={() =>
-handleSort('Clicks-7')}>Clicks<br/>7d</th>
-                                                    <th onClick={() =>
-handleSort('Spend-7')}>Spend<br/>7d</th>
-                                                    <th onClick={() =>
-handleSort('Orders-7')}>Orders<br/>7d</th>
-                                                    <th onClick={() =>
-handleSort('CVR-7')}>CVR<br/>7d</th>
-                                                    <th onClick={() =>
-handleSort('ACOS-7')}>ACoS<br/>7d</th>
-                                                    <th onClick={() => handleSort('Spent DB
-Yesterday')}>DB<br/>Yest</th>
-                                                    <th onClick={() => handleSort('Spent
-Yesterday')}>Spent<br/>Yest</th>
-                                                    <th onClick={() => handleSort('Budget
-Check')}>Budget<br/>Check</th>
-                                                    <th onClick={() => handleSort('Last 30
-days')}>%<br/>30d</th>
-                                                    <th onClick={() => handleSort('Last 7
-days')}>%<br/>7d</th>
-                                                    <th onClick={() =>
-handleSort('Yesterday')}>%<br/>Yest</th>
-                                                    <th onClick={() => handleSort('Increase bids
-by placement')}>Multi<br/>plier</th>
-                                                    <th onClick={() => handleSort('Changes in
-placement')}>Changes</th>
+                                                    <th onClick={() => handleSort('Campaign')}>Campaign</th>
+                                                    <th onClick={() => handleSort('Placement Type')}>Place</th>
+                                                    <th onClick={() => handleSort('Budget')}>Budget</th>
+                                                    <th onClick={() => handleSort('Clicks-30')}>Clicks<br/>30d</th>
+                                                    <th onClick={() => handleSort('Spend-30')}>Spend<br/>30d</th>
+                                                    <th onClick={() => handleSort('Orders-30')}>Orders<br/>30d</th>
+                                                    <th onClick={() => handleSort('CVR-30')}>CVR<br/>30d</th>
+                                                    <th onClick={() => handleSort('ACoS-30')}>ACoS<br/>30d</th>
+                                                    <th onClick={() => handleSort('Clicks-7')}>Clicks<br/>7d</th>
+                                                    <th onClick={() => handleSort('Spend-7')}>Spend<br/>7d</th>
+                                                    <th onClick={() => handleSort('Orders-7')}>Orders<br/>7d</th>
+                                                    <th onClick={() => handleSort('CVR-7')}>CVR<br/>7d</th>
+                                                    <th onClick={() => handleSort('ACOS-7')}>ACoS<br/>7d</th>
+                                                    <th onClick={() => handleSort('Spent DB Yesterday')}>DB<br/>Yest</th>
+                                                    <th onClick={() => handleSort('Spent Yesterday')}>Spent<br/>Yest</th>
+                                                    <th onClick={() => handleSort('Budget Check')}>Budget<br/>Check</th>
+                                                    <th onClick={() => handleSort('Last 30 days')}>%<br/>30d</th>
+                                                    <th onClick={() => handleSort('Last 7 days')}>%<br/>7d</th>
+                                                    <th onClick={() => handleSort('Yesterday')}>%<br/>Yest</th>
+                                                    <th onClick={() => handleSort('Increase bids by placement')}>Multi<br/>plier</th>
+                                                    <th onClick={() => handleSort('Changes in placement')}>Changes</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {filteredData.slice(0, 200).map((row, index) => {
-                                                    const multiplier = row['Increase bids by
-placement'];
+                                                    const multiplier = row['Increase bids by placement'];
                                                     const isNewCampaignGroup = index > 0 &&
-                                                        filteredData[index - 1].Campaign !==
-row.Campaign;
+                                                        filteredData[index - 1].Campaign !== row.Campaign;
 
                                                     return (
-                                                        <tr key={index}
-className={isNewCampaignGroup ? 'campaign-group-separator' : ''}>
+                                                        <tr key={index} className={isNewCampaignGroup ? 'campaign-group-separator' : ''}>
                                                             <td style={{maxWidth: '150px'}}>
-                                                                {editingCell === 'campaign-' +
-index ? (
-                                                                    <div onClick={() =>
-setEditingCell(null)} style={{ whiteSpace: 'normal', wordBreak: 'break-word', cursor: 'pointer',
-background: 'rgba(0, 255, 148, 0.1)', padding: '0.25rem', borderRadius: '4px' }}>
+                                                                {editingCell === 'campaign-' + index ? (
+                                                                    <div onClick={() => setEditingCell(null)} style={{ whiteSpace: 'normal', wordBreak: 'break-word', cursor: 'pointer', background: 'rgba(0, 255, 148, 0.1)', padding: '0.25rem', borderRadius: '4px' }}>
                                                                         {row.Campaign}
                                                                     </div>
                                                                 ) : (
-                                                                    <div onClick={() =>
-handleCampaignClick(index)} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace:
-'nowrap', cursor: 'pointer' }}>
+                                                                    <div onClick={() => handleCampaignClick(index)} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                                                                         {row.Campaign}
                                                                     </div>
                                                                 )}
                                                             </td>
-                                                            <td style={{minWidth:
-'60px'}}>{getPlacementBadge(row['Placement Type'])}</td>
+                                                            <td style={{minWidth: '60px'}}>{getPlacementBadge(row['Placement Type'])}</td>
                                                             <td>{row.Budget || '-'}</td>
-                                                            <td
-className="metric-group-30d">{row['Clicks-30'] || 0}</td>
-                                                            <td
-className="metric-group-30d">{formatCurrency(row['Spend-30'])}</td>
-                                                            <td
-className="metric-group-30d">{row['Orders-30'] || 0}</td>
-                                                            <td className={'metric-group-30d ' +
-(parseFloat(row['CVR-30']) > 5 ? 'metric-positive' : '')}>{formatPercent(row['CVR-30'])}</td>
-                                                            <td className={'metric-group-30d ' +
-(parseFloat(row['ACoS-30']) > 30 ? 'metric-negative' :
-'metric-positive')}>{formatPercent(row['ACoS-30'])}</td>
-                                                            <td
-className="metric-group-7d">{row['Clicks-7'] || 0}</td>
-                                                            <td
-className="metric-group-7d">{formatCurrency(row['Spend-7'])}</td>
-                                                            <td
-className="metric-group-7d">{row['Orders-7'] || 0}</td>
-                                                            <td className={'metric-group-7d ' +
-(parseFloat(row['CVR-7']) > 5 ? 'metric-positive' :
-'')}>{formatPercent(row['CVR-7'])}{getTrendArrow(row['CVR-30'], row['CVR-7'], false)}</td>
-                                                            <td className={'metric-group-7d ' +
-(parseFloat(row['ACOS-7']) > 30 ? 'metric-negative' :
-'metric-positive')}>{formatPercent(row['ACOS-7'])}{getTrendArrow(row['ACoS-30'], row['ACOS-7'],
-true)}</td>
-                                                            <td>{formatCurrency(row['Spent DB
-Yesterday'])}</td>
-                                                            <td>{formatCurrency(row['Spent
-Yesterday'])}</td>
+                                                            <td className="metric-group-30d">{row['Clicks-30'] || 0}</td>
+                                                            <td className="metric-group-30d">{formatCurrency(row['Spend-30'])}</td>
+                                                            <td className="metric-group-30d">{row['Orders-30'] || 0}</td>
+                                                            <td className={'metric-group-30d ' + (parseFloat(row['CVR-30']) > 5 ? 'metric-positive' : '')}>{formatPercent(row['CVR-30'])}</td>
+                                                            <td className={'metric-group-30d ' + (parseFloat(row['ACoS-30']) > 30 ? 'metric-negative' : 'metric-positive')}>{formatPercent(row['ACoS-30'])}</td>
+                                                            <td className="metric-group-7d">{row['Clicks-7'] || 0}</td>
+                                                            <td className="metric-group-7d">{formatCurrency(row['Spend-7'])}</td>
+                                                            <td className="metric-group-7d">{row['Orders-7'] || 0}</td>
+                                                            <td className={'metric-group-7d ' + (parseFloat(row['CVR-7']) > 5 ? 'metric-positive' : '')}>{formatPercent(row['CVR-7'])}{getTrendArrow(row['CVR-30'], row['CVR-7'], false)}</td>
+                                                            <td className={'metric-group-7d ' + (parseFloat(row['ACOS-7']) > 30 ? 'metric-negative' : 'metric-positive')}>{formatPercent(row['ACOS-7'])}{getTrendArrow(row['ACoS-30'], row['ACOS-7'], true)}</td>
+                                                            <td>{formatCurrency(row['Spent DB Yesterday'])}</td>
+                                                            <td>{formatCurrency(row['Spent Yesterday'])}</td>
                                                             <td>{row['Budget Check'] || '-'}</td>
-                                                            <td>{formatPercent(row['Last 30
-days'])}</td>
-                                                            <td>{formatPercent(row['Last 7
-days'])}</td>
-
-<td>{formatPercent(row['Yesterday'])}</td>
-                                                            <td>{multiplier ? (<span
-className="multiplier">{multiplier}%</span>) : '-'}</td>
+                                                            <td>{formatPercent(row['Last 30 days'])}</td>
+                                                            <td>{formatPercent(row['Last 7 days'])}</td>
+                                                            <td>{formatPercent(row['Yesterday'])}</td>
+                                                            <td>{multiplier ? (<span className="multiplier">{multiplier}%</span>) : '-'}</td>
                                                             <td style={{maxWidth: '70px'}}>
                                                                 {editingCell === index ? (
-                                                                    <input type="text"
-defaultValue={(row['Changes in placement'] || '').toString().replace('%', '')} onBlur={(e) =>
-handleChangeEdit(index, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter')
-handleChangeEdit(index, e.target.value); else if (e.key === 'Escape') setEditingCell(null); }}
-autoFocus style={{ width: '100%', background: 'var(--bg-dark)', border: '1px solid
-var(--accent-primary)', color: 'var(--text-primary)', padding: '0.25rem', borderRadius: '4px',
-fontSize: '0.75rem' }} />
+                                                                    <input type="text" defaultValue={(row['Changes in placement'] || '').toString().replace('%', '')} onBlur={(e) => handleChangeEdit(index, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleChangeEdit(index, e.target.value); else if (e.key === 'Escape') setEditingCell(null); }} autoFocus style={{ width: '100%', background: 'var(--bg-dark)', border: '1px solid var(--accent-primary)', color: 'var(--text-primary)', padding: '0.25rem', borderRadius: '4px', fontSize: '0.75rem' }} />
                                                                 ) : (
-                                                                    <span onClick={() =>
-handleCellClick(index)} style={{ cursor: 'pointer', display: 'block', padding: '0.25rem'
-}}>{row['Changes in placement'] || '-'}</span>
+                                                                    <span onClick={() => handleCellClick(index)} style={{ cursor: 'pointer', display: 'block', padding: '0.25rem' }}>{row['Changes in placement'] || '-'}</span>
                                                                 )}
                                                             </td>
                                                         </tr>
