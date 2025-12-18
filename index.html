@@ -1,1108 +1,1212 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BidFlow - Placement Optimizer</title>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-dark: #0a0e15;
-            --bg-card: #111827;
-            --bg-hover: #1a2332;
-            --accent-primary: #00ff94;
-            --accent-secondary: #0095ff;
-            --accent-warning: #ff9500;
-            --accent-danger: #ff3366;
-            --text-primary: #e5e7eb;
-            --text-secondary: #9ca3af;
-            --border: #1f2937;
-            --shadow: rgba(0, 255, 148, 0.1);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'DM Sans', sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-primary);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        .app-container {
-            min-height: 100vh;
-            position: relative;
-        }
-
-        .bg-grid {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                linear-gradient(var(--border) 1px, transparent 1px),
-                linear-gradient(90deg, var(--border) 1px, transparent 1px);
-            background-size: 50px 50px;
-            opacity: 0.3;
-            z-index: 0;
-            animation: gridMove 20s linear infinite;
-        }
-
-        @keyframes gridMove {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(50px, 50px); }
-        }
-
-        .content {
-            position: relative;
-            z-index: 1;
-            max-width: 1600px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-
-        header {
-            margin-bottom: 2rem;
-            animation: slideDown 0.6s ease-out;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        h1 {
-            font-size: 2rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.02em;
-        }
-
-        .subtitle {
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--text-secondary);
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: var(--text-secondary);
-        }
-
-        .loading-spinner {
-            font-size: 3rem;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .upload-zone {
-            background: var(--bg-card);
-            border: 2px dashed var(--border);
-            border-radius: 16px;
-            padding: 2rem 1rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 1.5rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .upload-zone:hover {
-            border-color: var(--accent-primary);
-            background: var(--bg-hover);
-            box-shadow: 0 0 40px var(--shadow);
-        }
-
-        .upload-icon {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            display: inline-block;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .btn {
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            color: var(--bg-dark);
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 700;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-family: 'JetBrains Mono', monospace;
-            box-shadow: 0 4px 12px rgba(0, 255, 148, 0.2);
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 255, 148, 0.3);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .stat-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1rem;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
-            transform: scaleX(0);
-            transform-origin: left;
-            transition: transform 0.5s ease;
-        }
-
-        .stat-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .stat-card:hover {
-            border-color: var(--accent-primary);
-            transform: translateY(-4px);
-            box-shadow: 0 8px 30px var(--shadow);
-        }
-
-        .stat-label {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            color: var(--text-secondary);
-            letter-spacing: 0.1em;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-value {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: var(--accent-primary);
-        }
-
-        .stat-detail {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            margin-top: 0.25rem;
-        }
-
-        .data-table {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 1.5rem;
-        }
-
-        .table-header {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .table-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-        }
-
-        .table-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        input, select {
-            background: var(--bg-dark);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            padding: 0.5rem;
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
-        }
-
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 3px rgba(0, 255, 148, 0.1);
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.75rem;
-        }
-
-        thead {
-            background: var(--bg-hover);
-        }
-
-        th {
-            padding: 0.5rem 0.3rem;
-            text-align: left;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            color: var(--text-secondary);
-            font-weight: 700;
-            cursor: pointer;
-            transition: color 0.3s ease;
-            white-space: nowrap;
-            line-height: 1.3;
-        }
-
-        th:hover {
-            color: var(--accent-primary);
-        }
-
-        td {
-            padding: 0.6rem 0.3rem;
-            border-top: 1px solid var(--border);
-            font-size: 0.75rem;
-        }
-
-        tr {
-            transition: background 0.2s ease;
-        }
-
-        tbody tr:hover {
-            background: var(--bg-hover);
-        }
-
-        .metric-positive {
-            color: var(--accent-primary);
-            font-weight: 600;
-        }
-
-        .metric-negative {
-            color: var(--accent-danger);
-            font-weight: 600;
-        }
-
-        .multiplier {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
-            padding: 0.2rem 0.4rem;
-            border-radius: 4px;
-            background: rgba(0, 255, 148, 0.1);
-            color: var(--accent-primary);
-        }
-
-        .metric-group-30d {
-            background: rgba(0, 255, 148, 0.08);
-        }
-
-        .metric-group-7d {
-            background: rgba(0, 149, 255, 0.08);
-        }
-
-        tbody tr:hover .metric-group-30d,
-        tbody tr:hover .metric-group-7d {
-            background: var(--bg-hover);
-        }
-
-        .campaign-group-separator {
-            border-top: 2px solid var(--accent-primary) !important;
-        }
-
-        .chart-container {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-            height: 280px;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 0.15rem 0.4rem;
-            border-radius: 4px;
-            font-size: 0.55rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-family: 'JetBrains Mono', monospace;
-            margin-right: 0.25rem;
-        }
-
-        .badge-top {
-            background: rgba(0, 255, 148, 0.2);
-            color: var(--accent-primary);
-        }
-
-        .badge-pp {
-            background: rgba(0, 149, 255, 0.2);
-            color: var(--accent-secondary);
-        }
-
-        .badge-ros {
-            background: rgba(255, 149, 0, 0.2);
-            color: var(--accent-warning);
-        }
-
-        .badge-business {
-            background: rgba(255, 51, 102, 0.2);
-            color: var(--accent-danger);
-        }
-
-        @media (min-width: 768px) {
-            .content {
-                padding: 2rem;
-            }
-
-            h1 {
-                font-size: 3rem;
-            }
-
-            .subtitle {
-                font-size: 0.9rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-
-            .stat-value {
-                font-size: 1.8rem;
-            }
-
-            .table-header {
-                flex-direction: row;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .table-controls {
-                flex-direction: row;
-                width: auto;
-            }
-
-            table {
-                font-size: 0.85rem;
-            }
-
-            th {
-                font-size: 0.75rem;
-                padding: 1rem 0.5rem;
-            }
-
-            td {
-                padding: 1rem 0.5rem;
-                font-size: 0.85rem;
-            }
-
-            .chart-container {
-                height: 400px;
-                padding: 1.5rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
-
-        const CONFIG = {
-            GOOGLE_API_KEY: 'AIzaSyAl3vMZM_kXq1RB1Jhk_5P3_NrOHnXCTyQ',
-            GOOGLE_DRIVE_FOLDER_ID: '1MZEl4NUwIq-ObppjNdK3qnRR7XFitdrA',
-            N8N_WEBHOOK_URL: ' https://n8n.bidflow.app/webhook/481801ae-ca24-4b0c-9a85-43fe438dfa1b',
-            AUTO_REFRESH_INTERVAL: 300000 // 5 minutes
-        };
-
-        function PlacementDashboard() {
-            const [reports, setReports] = useState([]);
-            const [filteredData, setFilteredData] = useState([]);
-            const [searchTerm, setSearchTerm] = useState('');
-            const [portfolioFilter, setPortfolioFilter] = useState('all');
-            const [sortConfig, setSortConfig] = useState({ key: 'Campaign', direction: 'asc' });
-            const [editingCell, setEditingCell] = useState(null);
-            const [weeklySheets, setWeeklySheets] = useState([]);
-            const [currentSheet, setCurrentSheet] = useState(null);
-            const [loading, setLoading] = useState(true);
-            const [submitting, setSubmitting] = useState(false);
-            const chartRef = useRef(null);
-            const chartInstance = useRef(null);
-
-            useEffect(() => {
-                fetchWeeklySheets();
-                
-                const interval = setInterval(() => {
-                    if (currentSheet) {
-                        fetchSheetData(currentSheet.id);
-                    }
-                }, CONFIG.AUTO_REFRESH_INTERVAL);
-
-                return () => clearInterval(interval);
-            }, []);
-
-            const fetchWeeklySheets = async () => {
-                try {
-                    setLoading(true);
-                    const response = await fetch(
-                        `https://www.googleapis.com/drive/v3/files?` +
-                        `q='${CONFIG.GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+mimeType='application/vnd.google-apps.spreadsheet'` +
-                        `&key=${CONFIG.GOOGLE_API_KEY}` +
-                        `&fields=files(id,name)` +
-                        `&orderBy=name desc`
-                    );
-
-                    if (!response.ok) {
-                        throw new Error('Failed to fetch sheets from Google Drive');
-                    }
-
-                    const data = await response.json();
-                    const sheets = data.files.map(file => ({
-                        id: file.id,
-                        name: file.name,
-                        weekNumber: extractWeekNumber(file.name)
-                    }));
-
-                    setWeeklySheets(sheets);
-
-                    if (sheets.length > 0) {
-                        const mostRecent = sheets[0];
-                        setCurrentSheet(mostRecent);
-                        await fetchSheetData(mostRecent.id);
-                    }
-                } catch (error) {
-                    console.error('Error fetching weekly sheets:', error);
-                    alert('Error loading weekly reports. Please check console for details.');
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            const extractWeekNumber = (filename) => {
-                const match = filename.match(/Week(\d+)/i);
-                return match ? `Week ${match[1]}` : filename;
-            };
-
-            const fetchSheetData = async (sheetId) => {
-                try {
-                    const response = await fetch(
-                        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/USA!A:W?` +
-                        `key=${CONFIG.GOOGLE_API_KEY}`
-                    );
-
-                    if (!response.ok) {
-                        throw new Error('Failed to fetch sheet data');
-                    }
-
-                    const data = await response.json();
-                    const rows = data.values;
-
-                    if (!rows || rows.length === 0) {
-                        setReports([]);
-                        setFilteredData([]);
-                        return;
-                    }
-
-                    const headers = rows[0];
-                    const parsedData = rows.slice(1).map(row => {
-                        const obj = {};
-                        headers.forEach((header, index) => {
-                            obj[header] = row[index] || '';
-                        });
-                        return obj;
-                    }).filter(row => row.Campaign && row.Campaign !== '0');
-
-                    setReports(parsedData);
-                    setFilteredData(parsedData);
-                } catch (error) {
-                    console.error('Error fetching sheet data:', error);
-                    alert('Error loading sheet data. Please check console for details.');
-                }
-            };
-
-            const handleWeekChange = async (sheetId) => {
-                const selectedSheet = weeklySheets.find(s => s.id === sheetId);
-                setCurrentSheet(selectedSheet);
-                setLoading(true);
-                await fetchSheetData(sheetId);
-                setLoading(false);
-            };
-
-            useEffect(() => {
-                let filtered = reports;
-
-                if (searchTerm) {
-                    filtered = filtered.filter(row => {
-                        const campaign = (row.Campaign || '').toLowerCase();
-                        const portfolio = (row.Portfolio || '').toLowerCase();
-                        return campaign.includes(searchTerm.toLowerCase()) || 
-                               portfolio.includes(searchTerm.toLowerCase());
-                    });
-                }
-
-                if (portfolioFilter !== 'all') {
-                    filtered = filtered.filter(row => {
-                        return row.Portfolio === portfolioFilter;
-                    });
-                }
-
-                filtered = [...filtered].sort((a, b) => {
-                    if (sortConfig.key && sortConfig.key !== 'Campaign' && sortConfig.key !== 'Placement Type') {
-                        let aVal = a[sortConfig.key];
-                        let bVal = b[sortConfig.key];
-
-                        if (typeof aVal === 'string') aVal = aVal.toLowerCase();
-                        if (typeof bVal === 'string') bVal = bVal.toLowerCase();
-                        
-                        if (aVal === null || aVal === undefined) aVal = 0;
-                        if (bVal === null || bVal === undefined) bVal = 0;
-
-                        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-                        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-                    }
-
-                    const campaignA = (a.Campaign || '').toLowerCase();
-                    const campaignB = (b.Campaign || '').toLowerCase();
-                    
-                    if (campaignA !== campaignB) {
-                        return campaignA.localeCompare(campaignB);
-                    }
-
-                    const placementOrder = {
-                        'placement top': 1,
-                        'placement rest of search': 2,
-                        'placement product page': 3,
-                        'placement amazon business': 4
-                    };
-
-                    const placementA = (a['Placement Type'] || '').toLowerCase();
-                    const placementB = (b['Placement Type'] || '').toLowerCase();
-
-                    const orderA = placementOrder[placementA] || 999;
-                    const orderB = placementOrder[placementB] || 999;
-
-                    return orderA - orderB;
-                });
-
-                setFilteredData(filtered);
-            }, [reports, searchTerm, portfolioFilter, sortConfig]);
-
-            useEffect(() => {
-                if (filteredData.length > 0 && chartRef.current) {
-                    createChart();
-                }
-                return () => {
-                    if (chartInstance.current) {
-                        chartInstance.current.destroy();
-                    }
-                };
-            }, [filteredData]);
-
-            const createChart = () => {
-                if (chartInstance.current) {
-                    chartInstance.current.destroy();
-                }
-
-                const ctx = chartRef.current.getContext('2d');
-                
-                const placementData = {};
-                filteredData.forEach(row => {
-                    const placement = row['Placement Type'] || 'Unknown';
-                    const spend = parseFloat(row['Spend-7'] || 0);
-                    const clicks = parseFloat(row['Clicks-7'] || 0);
-                    
-                    if (!placementData[placement]) {
-                        placementData[placement] = { spend: 0, clicks: 0 };
-                    }
-                    placementData[placement].spend += spend;
-                    placementData[placement].clicks += clicks;
-                });
-
-                const labels = Object.keys(placementData);
-                const spendData = labels.map(label => placementData[label].spend);
-                const clicksData = labels.map(label => placementData[label].clicks);
-
-                chartInstance.current = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels.map(l => l.replace('Placement ', '')),
-                        datasets: [
-                            {
-                                label: 'Spend (7d)',
-                                data: spendData,
-                                backgroundColor: 'rgba(0, 255, 148, 0.6)',
-                                borderColor: 'rgba(0, 255, 148, 1)',
-                                borderWidth: 2,
-                                yAxisID: 'y'
-                            },
-                            {
-                                label: 'Clicks (7d)',
-                                data: clicksData,
-                                backgroundColor: 'rgba(0, 149, 255, 0.6)',
-                                borderColor: 'rgba(0, 149, 255, 1)',
-                                borderWidth: 2,
-                                yAxisID: 'y1'
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false,
-                        },
-                        plugins: {
-                            legend: {
-                                labels: {
-                                    color: '#e5e7eb',
-                                    font: {
-                                        family: 'JetBrains Mono',
-                                        size: 10
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                type: 'linear',
-                                display: true,
-                                position: 'left',
-                                grid: { color: '#1f2937' },
-                                ticks: {
-                                    color: '#00ff94',
-                                    font: { family: 'JetBrains Mono', size: 9 },
-                                    callback: function(value) { return '$' + value.toFixed(0); }
-                                }
-                            },
-                            y1: {
-                                type: 'linear',
-                                display: true,
-                                position: 'right',
-                                grid: { drawOnChartArea: false },
-                                ticks: {
-                                    color: '#0095ff',
-                                    font: { family: 'JetBrains Mono', size: 9 }
-                                }
-                            },
-                            x: {
-                                grid: { color: '#1f2937' },
-                                ticks: {
-                                    color: '#9ca3af',
-                                    font: { family: 'JetBrains Mono', size: 9 }
-                                }
-                            }
-                        }
-                    }
-                });
-            };
-
-            const stats = (() => {
-                const totalSpend7 = filteredData.reduce((sum, row) => sum + parseFloat(row['Spend-7'] || 0), 0);
-                const totalSpend30 = filteredData.reduce((sum, row) => sum + parseFloat(row['Spend-30'] || 0), 0);
-                const totalClicks7 = filteredData.reduce((sum, row) => sum + parseFloat(row['Clicks-7'] || 0), 0);
-                const totalOrders7 = filteredData.reduce((sum, row) => sum + parseFloat(row['Orders-7'] || 0), 0);
-                const cvr7 = totalClicks7 > 0 ? (totalOrders7 / totalClicks7 * 100) : 0;
-                return { totalSpend7, totalSpend30, totalClicks7, totalOrders7, cvr7 };
-            })();
-
-            const getUniquePortfolios = () => {
-                const portfolios = [...new Set(reports.map(r => r.Portfolio))].filter(Boolean);
-                return portfolios.sort();
-            };
-
-            const handleSort = (key) => {
-                setSortConfig(prevConfig => ({
-                    key,
-                    direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
-                }));
-            };
-
-            const getPlacementBadge = (placement) => {
-                const p = (placement || '').toLowerCase();
-                if (p.includes('top')) return <span className="badge badge-top">TOP</span>;
-                if (p.includes('product')) return <span className="badge badge-pp">PP</span>;
-                if (p.includes('rest')) return <span className="badge badge-ros">ROS</span>;
-                if (p.includes('business')) return <span className="badge badge-business">BIZ</span>;
-                return null;
-            };
-
-            const formatCurrency = (value) => {
-                return new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                }).format(value || 0);
-            };
-
-            const formatPercent = (value) => {
-                if (typeof value === 'string' && value.includes('%')) return value;
-                return `${(parseFloat(value) || 0).toFixed(2)}%`;
-            };
-
-            const handleChangeEdit = (index, newValue) => {
-                const updatedReports = [...reports];
-                const dataIndex = reports.findIndex((item) => 
-                    item.Campaign === filteredData[index].Campaign && 
-                    item['Placement Type'] === filteredData[index]['Placement Type']
-                );
-                
-                if (dataIndex !== -1) {
-                    let cleanValue = newValue.trim();
-                    if (cleanValue && !isNaN(cleanValue)) {
-                        cleanValue = cleanValue + '%';
-                    }
-                    updatedReports[dataIndex]['Changes in placement'] = cleanValue;
-                    setReports(updatedReports);
-                }
-                setEditingCell(null);
-            };
-
-            const handleCellClick = (index) => setEditingCell(index);
-            const handleCampaignClick = (index) => setEditingCell('campaign-' + index);
-
-            // EDITED FUNCTION TO FIX CORS Handshake
-            const handleSubmitChanges = async () => {
-                const changesData = reports.filter(row => 
-                    row['Changes in placement'] && row['Changes in placement'] !== '-' && row['Changes in placement'].trim() !== ''
-                ).map(row => ({
-                    campaign: row.Campaign,
-                    portfolio: row.Portfolio,
-                    placement: row['Placement Type'],
-                    currentMultiplier: row['Increase bids by placement'],
-                    newMultiplier: row['Changes in placement'],
-                    week: currentSheet?.weekNumber || 'Unknown'
-                }));
-
-                if (changesData.length === 0) {
-                    alert('No changes to submit. Add multiplier percentages in the Changes column first.');
-                    return;
-                }
-
-                if (!confirm(`Submit ${changesData.length} placement changes to Amazon Ads API?`)) {
-                    return;
-                }
-
-                try {
-                    setSubmitting(true);
-                    const response = await fetch(CONFIG.N8N_WEBHOOK_URL, {
-                        method: 'POST',
-                        mode: 'cors', // Explicitly enable CORS mode
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            changes: changesData,
-                            timestamp: new Date().toISOString(),
-                            week: currentSheet?.weekNumber || 'Unknown'
-                        })
-                    });
-
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`Server responded with ${response.status}: ${errorText}`);
-                    }
-
-                    const result = await response.json();
-                    alert(`✅ Successfully submitted ${changesData.length} changes!`);
-                    console.log('Submission result:', result);
-                    
-                } catch (error) {
-                    console.error('Error submitting changes:', error);
-                    alert(`❌ Connection Error: Ensure n8n is active and CORS is configured.\n\nDetail: ${error.message}`);
-                } finally {
-                    setSubmitting(false);
-                }
-            };
-
-            const getTrendArrow = (value30d, value7d, isACoS = false) => {
-                const val30 = parseFloat(value30d) || 0;
-                const val7 = parseFloat(value7d) || 0;
-                if (val30 === 0) return null;
-                const diff = val7 - val30;
-                if (Math.abs(diff) < 3) return null;
-                if (isACoS) {
-                    if (diff < -3) return <span style={{color: 'var(--accent-primary)', fontSize: '0.9rem', marginLeft: '2px'}}>↓</span>;
-                    if (diff > 3) return <span style={{color: 'var(--accent-danger)', fontSize: '0.9rem', marginLeft: '2px'}}>↑</span>;
-                } else {
-                    if (diff > 3) return <span style={{color: 'var(--accent-primary)', fontSize: '0.9rem', marginLeft: '2px'}}>↑</span>;
-                    if (diff < -3) return <span style={{color: 'var(--accent-danger)', fontSize: '0.9rem', marginLeft: '2px'}}>↓</span>;
-                }
-                return null;
-            };
-
-            if (loading && weeklySheets.length === 0) {
-                return (
-                    <div className="app-container">
-                        <div className="bg-grid"></div>
-                        <div className="content">
-                            <header>
-                                <h1>Placement Optimizer</h1>
-                                <p className="subtitle">Bid Multiplier Analysis Dashboard</p>
-                            </header>
-                            <div className="loading">
-                                <div className="loading-spinner">⚙️</div>
-                                <h3>Loading Weekly Reports...</h3>
-                                <p>Fetching data from Google Drive</p>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
-
-            return (
-                <div className="app-container">
-                    <div className="bg-grid"></div>
-                    <div className="content">
-                        <header>
-                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'}}>
-                                <div>
-                                    <h1>Placement Optimizer</h1>
-                                    <p className="subtitle">Bid Multiplier Analysis Dashboard</p>
-                                </div>
-                                {weeklySheets.length > 0 && (
-                                    <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end'}}>
-                                        <label style={{fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase'}}>
-                                            Select Week
-                                        </label>
-                                        <select
-                                            value={currentSheet?.id || ''}
-                                            onChange={(e) => handleWeekChange(e.target.value)}
-                                            style={{ minWidth: '200px', fontSize: '0.9rem', padding: '0.5rem 1rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: '700' }}
-                                        >
-                                            {weeklySheets.map(sheet => (
-                                                <option key={sheet.id} value={sheet.id}>
-                                                    {sheet.weekNumber}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
-                            </div>
-                        </header>
-
-                        {reports.length === 0 ? (
-                            <div className="upload-zone">
-                                <div className="upload-icon">📊</div>
-                                <h3>No Data Available</h3>
-                                <p style={{color: 'var(--text-secondary)', marginTop: '0.5rem'}}>Waiting for weekly reports in Google Drive...</p>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="stats-grid">
-                                    <div className="stat-card">
-                                        <div className="stat-label">Spend (7d)</div>
-                                        <div className="stat-value">{formatCurrency(stats.totalSpend7)}</div>
-                                        <div className="stat-detail">30d: {formatCurrency(stats.totalSpend30)}</div>
-                                    </div>
-                                    <div className="stat-card">
-                                        <div className="stat-label">Clicks (7d)</div>
-                                        <div className="stat-value">{stats.totalClicks7}</div>
-                                        <div className="stat-detail">{stats.totalOrders7} orders</div>
-                                    </div>
-                                    <div className="stat-card">
-                                        <div className="stat-label">CVR (7d)</div>
-                                        <div className="stat-value" style={{color: stats.cvr7 > 5 ? 'var(--accent-primary)' : 'var(--accent-warning)'}}>
-                                            {formatPercent(stats.cvr7)}
-                                        </div>
-                                        <div className="stat-detail">{filteredData.length} placements</div>
-                                    </div>
-                                    <div className="stat-card">
-                                        <div className="stat-label">Current Week</div>
-                                        <div className="stat-value" style={{fontSize: '1.2rem'}}>
-                                            {currentSheet?.weekNumber || 'N/A'}
-                                        </div>
-                                        <div className="stat-detail">
-                                            {[...new Set(filteredData.map(r => r.Campaign))].length} campaigns
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div style={{marginBottom: '1.5rem', display: 'flex', justifyContent: 'flex-end'}}>
-                                    <button
-                                        onClick={handleSubmitChanges}
-                                        disabled={submitting}
-                                        className="btn"
-                                    >
-                                        {submitting ? '⏳ Submitting...' : '🚀 Submit Changes to Amazon'}
-                                    </button>
-                                </div>
-
-                                <div className="chart-container">
-                                    <canvas ref={chartRef}></canvas>
-                                </div>
-
-                                <div className="data-table">
-                                    <div className="table-header">
-                                        <div className="table-title">Placement Details</div>
-                                        <div className="table-controls">
-                                            <input
-                                                type="text"
-                                                placeholder="Search campaigns..."
-                                                value={searchTerm}
-                                                onChange={(e) => setSearchTerm(e.target.value)}
-                                            />
-                                            <select
-                                                value={portfolioFilter}
-                                                onChange={(e) => setPortfolioFilter(e.target.value)}
-                                            >
-                                                <option value="all">All Portfolios</option>
-                                                {getUniquePortfolios().map(p => (
-                                                    <option key={p} value={p}>{p}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="table-wrapper">
-                                        <table>
-                                            <thead>
-                                                <tr>
-                                                    <th onClick={() => handleSort('Campaign')}>Campaign</th>
-                                                    <th onClick={() => handleSort('Placement Type')}>Place</th>
-                                                    <th onClick={() => handleSort('Budget')}>Budget</th>
-                                                    <th onClick={() => handleSort('Clicks-30')}>Clicks<br/>30d</th>
-                                                    <th onClick={() => handleSort('Spend-30')}>Spend<br/>30d</th>
-                                                    <th onClick={() => handleSort('Orders-30')}>Orders<br/>30d</th>
-                                                    <th onClick={() => handleSort('CVR-30')}>CVR<br/>30d</th>
-                                                    <th onClick={() => handleSort('ACoS-30')}>ACoS<br/>30d</th>
-                                                    <th onClick={() => handleSort('Clicks-7')}>Clicks<br/>7d</th>
-                                                    <th onClick={() => handleSort('Spend-7')}>Spend<br/>7d</th>
-                                                    <th onClick={() => handleSort('Orders-7')}>Orders<br/>7d</th>
-                                                    <th onClick={() => handleSort('CVR-7')}>CVR<br/>7d</th>
-                                                    <th onClick={() => handleSort('ACOS-7')}>ACoS<br/>7d</th>
-                                                    <th onClick={() => handleSort('Spent DB Yesterday')}>DB<br/>Yest</th>
-                                                    <th onClick={() => handleSort('Spent Yesterday')}>Spent<br/>Yest</th>
-                                                    <th onClick={() => handleSort('Budget Check')}>Budget<br/>Check</th>
-                                                    <th onClick={() => handleSort('Last 30 days')}>%<br/>30d</th>
-                                                    <th onClick={() => handleSort('Last 7 days')}>%<br/>7d</th>
-                                                    <th onClick={() => handleSort('Yesterday')}>%<br/>Yest</th>
-                                                    <th onClick={() => handleSort('Increase bids by placement')}>Multi<br/>plier</th>
-                                                    <th onClick={() => handleSort('Changes in placement')}>Changes</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {filteredData.slice(0, 200).map((row, index) => {
-                                                    const multiplier = row['Increase bids by placement'];
-                                                    const isNewCampaignGroup = index > 0 && 
-                                                        filteredData[index - 1].Campaign !== row.Campaign;
-                                                    
-                                                    return (
-                                                        <tr key={index} className={isNewCampaignGroup ? 'campaign-group-separator' : ''}>
-                                                            <td style={{maxWidth: '150px'}}>
-                                                                {editingCell === 'campaign-' + index ? (
-                                                                    <div onClick={() => setEditingCell(null)} style={{ whiteSpace: 'normal', wordBreak: 'break-word', cursor: 'pointer', background: 'rgba(0, 255, 148, 0.1)', padding: '0.25rem', borderRadius: '4px' }}>
-                                                                        {row.Campaign}
-                                                                    </div>
-                                                                ) : (
-                                                                    <div onClick={() => handleCampaignClick(index)} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}>
-                                                                        {row.Campaign}
-                                                                    </div>
-                                                                )}
-                                                            </td>
-                                                            <td style={{minWidth: '60px'}}>{getPlacementBadge(row['Placement Type'])}</td>
-                                                            <td>{row.Budget || '-'}</td>
-                                                            <td className="metric-group-30d">{row['Clicks-30'] || 0}</td>
-                                                            <td className="metric-group-30d">{formatCurrency(row['Spend-30'])}</td>
-                                                            <td className="metric-group-30d">{row['Orders-30'] || 0}</td>
-                                                            <td className={'metric-group-30d ' + (parseFloat(row['CVR-30']) > 5 ? 'metric-positive' : '')}>{formatPercent(row['CVR-30'])}</td>
-                                                            <td className={'metric-group-30d ' + (parseFloat(row['ACoS-30']) > 30 ? 'metric-negative' : 'metric-positive')}>{formatPercent(row['ACoS-30'])}</td>
-                                                            <td className="metric-group-7d">{row['Clicks-7'] || 0}</td>
-                                                            <td className="metric-group-7d">{formatCurrency(row['Spend-7'])}</td>
-                                                            <td className="metric-group-7d">{row['Orders-7'] || 0}</td>
-                                                            <td className={'metric-group-7d ' + (parseFloat(row['CVR-7']) > 5 ? 'metric-positive' : '')}>{formatPercent(row['CVR-7'])}{getTrendArrow(row['CVR-30'], row['CVR-7'], false)}</td>
-                                                            <td className={'metric-group-7d ' + (parseFloat(row['ACOS-7']) > 30 ? 'metric-negative' : 'metric-positive')}>{formatPercent(row['ACOS-7'])}{getTrendArrow(row['ACoS-30'], row['ACOS-7'], true)}</td>
-                                                            <td>{formatCurrency(row['Spent DB Yesterday'])}</td>
-                                                            <td>{formatCurrency(row['Spent Yesterday'])}</td>
-                                                            <td>{row['Budget Check'] || '-'}</td>
-                                                            <td>{formatPercent(row['Last 30 days'])}</td>
-                                                            <td>{formatPercent(row['Last 7 days'])}</td>
-                                                            <td>{formatPercent(row['Yesterday'])}</td>
-                                                            <td>{multiplier ? (<span className="multiplier">{multiplier}%</span>) : '-'}</td>
-                                                            <td style={{maxWidth: '70px'}}>
-                                                                {editingCell === index ? (
-                                                                    <input type="text" defaultValue={(row['Changes in placement'] || '').toString().replace('%', '')} onBlur={(e) => handleChangeEdit(index, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleChangeEdit(index, e.target.value); else if (e.key === 'Escape') setEditingCell(null); }} autoFocus style={{ width: '100%', background: 'var(--bg-dark)', border: '1px solid var(--accent-primary)', color: 'var(--text-primary)', padding: '0.25rem', borderRadius: '4px', fontSize: '0.75rem' }} />
-                                                                ) : (
-                                                                    <span onClick={() => handleCellClick(index)} style={{ cursor: 'pointer', display: 'block', padding: '0.25rem' }}>{row['Changes in placement'] || '-'}</span>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </div>
-            );
-        }
-
-        ReactDOM.render(<PlacementDashboard />, document.getElementById('root'));
-    </script>
-</body>
-</html>
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>BidFlow - Placement Optimizer</title>
+      <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+      <script crossorigin
+  src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+      <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:
+  wght@400;500;700&display=swap" rel="stylesheet">
+      <style>
+          :root {
+              --bg-dark: #0a0e15;
+              --bg-card: #111827;
+              --bg-hover: #1a2332;
+              --accent-primary: #00ff94;
+              --accent-secondary: #0095ff;
+              --accent-warning: #ff9500;
+              --accent-danger: #ff3366;
+              --text-primary: #e5e7eb;
+              --text-secondary: #9ca3af;
+              --border: #1f2937;
+              --shadow: rgba(0, 255, 148, 0.1);
+          }
+
+          * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+          }
+
+          body {
+              font-family: 'DM Sans', sans-serif;
+              background: var(--bg-dark);
+              color: var(--text-primary);
+              line-height: 1.6;
+              overflow-x: hidden;
+          }
+
+          .app-container {
+              min-height: 100vh;
+              position: relative;
+          }
+
+          .bg-grid {
+              position: fixed;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              background-image:
+                  linear-gradient(var(--border) 1px, transparent 1px),
+                  linear-gradient(90deg, var(--border) 1px, transparent 1px);
+              background-size: 50px 50px;
+              opacity: 0.3;
+              z-index: 0;
+              animation: gridMove 20s linear infinite;
+          }
+
+          @keyframes gridMove {
+              0% { transform: translate(0, 0); }
+              100% { transform: translate(50px, 50px); }
+          }
+
+          .content {
+              position: relative;
+              z-index: 1;
+              max-width: 1600px;
+              margin: 0 auto;
+              padding: 1rem;
+          }
+
+          header {
+              margin-bottom: 2rem;
+              animation: slideDown 0.6s ease-out;
+          }
+
+          @keyframes slideDown {
+              from {
+                  opacity: 0;
+                  transform: translateY(-20px);
+              }
+              to {
+                  opacity: 1;
+                  transform: translateY(0);
+              }
+          }
+
+          h1 {
+              font-size: 2rem;
+              font-weight: 700;
+              background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              background-clip: text;
+              margin-bottom: 0.5rem;
+              letter-spacing: -0.02em;
+          }
+
+          .subtitle {
+              font-family: 'JetBrains Mono', monospace;
+              color: var(--text-secondary);
+              font-size: 0.75rem;
+              text-transform: uppercase;
+              letter-spacing: 0.1em;
+          }
+
+          .loading {
+              text-align: center;
+              padding: 4rem 2rem;
+              color: var(--text-secondary);
+          }
+
+          .loading-spinner {
+              font-size: 3rem;
+              animation: spin 1s linear infinite;
+          }
+
+          @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+          }
+
+          .upload-zone {
+              background: var(--bg-card);
+              border: 2px dashed var(--border);
+              border-radius: 16px;
+              padding: 2rem 1rem;
+              text-align: center;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              margin-bottom: 1.5rem;
+              position: relative;
+              overflow: hidden;
+          }
+
+          .upload-zone:hover {
+              border-color: var(--accent-primary);
+              background: var(--bg-hover);
+              box-shadow: 0 0 40px var(--shadow);
+          }
+
+          .upload-icon {
+              font-size: 2.5rem;
+              margin-bottom: 0.5rem;
+              display: inline-block;
+              animation: float 3s ease-in-out infinite;
+          }
+
+          @keyframes float {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-10px); }
+          }
+
+          .btn {
+              background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+              color: var(--bg-dark);
+              border: none;
+              padding: 0.75rem 1.5rem;
+              border-radius: 8px;
+              font-weight: 700;
+              cursor: pointer;
+              font-size: 0.9rem;
+              transition: all 0.3s ease;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              font-family: 'JetBrains Mono', monospace;
+              box-shadow: 0 4px 12px rgba(0, 255, 148, 0.2);
+          }
+
+          .btn:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 8px 20px rgba(0, 255, 148, 0.3);
+          }
+
+          .btn:disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
+              transform: none;
+          }
+
+          .stats-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 1rem;
+              margin-bottom: 1.5rem;
+          }
+
+          .stat-card {
+              background: var(--bg-card);
+              border: 1px solid var(--border);
+              border-radius: 12px;
+              padding: 1rem;
+              transition: all 0.3s ease;
+              position: relative;
+              overflow: hidden;
+          }
+
+          .stat-card::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 3px;
+              background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+              transform: scaleX(0);
+              transform-origin: left;
+              transition: transform 0.5s ease;
+          }
+
+          .stat-card:hover::before {
+              transform: scaleX(1);
+          }
+
+          .stat-card:hover {
+              border-color: var(--accent-primary);
+              transform: translateY(-4px);
+              box-shadow: 0 8px 30px var(--shadow);
+          }
+
+          .stat-label {
+              font-family: 'JetBrains Mono', monospace;
+              font-size: 0.65rem;
+              text-transform: uppercase;
+              color: var(--text-secondary);
+              letter-spacing: 0.1em;
+              margin-bottom: 0.5rem;
+          }
+
+          .stat-value {
+              font-size: 1.4rem;
+              font-weight: 700;
+              color: var(--accent-primary);
+          }
+
+          .stat-detail {
+              font-size: 0.7rem;
+              color: var(--text-secondary);
+              margin-top: 0.25rem;
+          }
+
+          .data-table {
+              background: var(--bg-card);
+              border: 1px solid var(--border);
+              border-radius: 12px;
+              overflow: hidden;
+              margin-bottom: 1.5rem;
+          }
+
+          .table-header {
+              padding: 1rem;
+              border-bottom: 1px solid var(--border);
+              display: flex;
+              flex-direction: column;
+              gap: 1rem;
+          }
+
+          .table-title {
+              font-size: 1.1rem;
+              font-weight: 700;
+          }
+
+          .table-controls {
+              display: flex;
+              flex-direction: column;
+              gap: 0.75rem;
+          }
+
+          input, select {
+              background: var(--bg-dark);
+              border: 1px solid var(--border);
+              color: var(--text-primary);
+              padding: 0.5rem;
+              border-radius: 8px;
+              font-family: 'DM Sans', sans-serif;
+              transition: all 0.3s ease;
+              font-size: 0.9rem;
+          }
+
+          input:focus, select:focus {
+              outline: none;
+              border-color: var(--accent-primary);
+              box-shadow: 0 0 0 3px rgba(0, 255, 148, 0.1);
+          }
+
+          .table-wrapper {
+              overflow-x: auto;
+          }
+
+          table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 0.75rem;
+          }
+
+          thead {
+              background: var(--bg-hover);
+          }
+
+          th {
+              padding: 0.5rem 0.3rem;
+              text-align: left;
+              font-family: 'JetBrains Mono', monospace;
+              font-size: 0.65rem;
+              text-transform: uppercase;
+              letter-spacing: 0.03em;
+              color: var(--text-secondary);
+              font-weight: 700;
+              cursor: pointer;
+              transition: color 0.3s ease;
+              white-space: nowrap;
+              line-height: 1.3;
+          }
+
+          th:hover {
+              color: var(--accent-primary);
+          }
+
+          td {
+              padding: 0.6rem 0.3rem;
+              border-top: 1px solid var(--border);
+              font-size: 0.75rem;
+          }
+
+          tr {
+              transition: background 0.2s ease;
+          }
+
+          tbody tr:hover {
+              background: var(--bg-hover);
+          }
+
+          .metric-positive {
+              color: var(--accent-primary);
+              font-weight: 600;
+          }
+
+          .metric-negative {
+              color: var(--accent-danger);
+              font-weight: 600;
+          }
+
+          .multiplier {
+              font-family: 'JetBrains Mono', monospace;
+              font-weight: 700;
+              padding: 0.2rem 0.4rem;
+              border-radius: 4px;
+              background: rgba(0, 255, 148, 0.1);
+              color: var(--accent-primary);
+          }
+
+          .metric-group-30d {
+              background: rgba(0, 255, 148, 0.08);
+          }
+
+          .metric-group-7d {
+              background: rgba(0, 149, 255, 0.08);
+          }
+
+          tbody tr:hover .metric-group-30d,
+          tbody tr:hover .metric-group-7d {
+              background: var(--bg-hover);
+          }
+
+          .campaign-group-separator {
+              border-top: 2px solid var(--accent-primary) !important;
+          }
+
+          .chart-container {
+              background: var(--bg-card);
+              border: 1px solid var(--border);
+              border-radius: 12px;
+              padding: 1rem;
+              margin-bottom: 1.5rem;
+              height: 280px;
+          }
+
+          .badge {
+              display: inline-block;
+              padding: 0.15rem 0.4rem;
+              border-radius: 4px;
+              font-size: 0.55rem;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              font-family: 'JetBrains Mono', monospace;
+              margin-right: 0.25rem;
+          }
+
+          .badge-top {
+              background: rgba(0, 255, 148, 0.2);
+              color: var(--accent-primary);
+          }
+
+          .badge-pp {
+              background: rgba(0, 149, 255, 0.2);
+              color: var(--accent-secondary);
+          }
+
+          .badge-ros {
+              background: rgba(255, 149, 0, 0.2);
+              color: var(--accent-warning);
+          }
+
+          .badge-business {
+              background: rgba(255, 51, 102, 0.2);
+              color: var(--accent-danger);
+          }
+
+          @media (min-width: 768px) {
+              .content {
+                  padding: 2rem;
+              }
+
+              h1 {
+                  font-size: 3rem;
+              }
+
+              .subtitle {
+                  font-size: 0.9rem;
+              }
+
+              .stats-grid {
+                  grid-template-columns: repeat(4, 1fr);
+              }
+
+              .stat-value {
+                  font-size: 1.8rem;
+              }
+
+              .table-header {
+                  flex-direction: row;
+                  justify-content: space-between;
+                  align-items: center;
+              }
+
+              .table-controls {
+                  flex-direction: row;
+                  width: auto;
+              }
+
+              table {
+                  font-size: 0.85rem;
+              }
+
+              th {
+                  font-size: 0.75rem;
+                  padding: 1rem 0.5rem;
+              }
+
+              td {
+                  padding: 1rem 0.5rem;
+                  font-size: 0.85rem;
+              }
+
+              .chart-container {
+                  height: 400px;
+                  padding: 1.5rem;
+              }
+          }
+      </style>
+  </head>
+  <body>
+      <div id="root"></div>
+
+      <script type="text/babel">
+          const { useState, useEffect, useRef } = React;
+
+          const CONFIG = {
+              GOOGLE_API_KEY: 'AIzaSyAl3vMZM_kXq1RB1Jhk_5P3_NrOHnXCTyQ',
+              GOOGLE_DRIVE_FOLDER_ID: '1MZEl4NUwIq-ObppjNdK3qnRR7XFitdrA',
+              N8N_WEBHOOK_URL: 'https://n8n.bidflow.app/webhook/481801ae-ca24-4b0c-9a85-43fe438dfa1b',
+              AUTO_REFRESH_INTERVAL: 300000 // 5 minutes
+          };
+
+          function PlacementDashboard() {
+              const [reports, setReports] = useState([]);
+              const [filteredData, setFilteredData] = useState([]);
+              const [searchTerm, setSearchTerm] = useState('');
+              const [portfolioFilter, setPortfolioFilter] = useState('all');
+              const [sortConfig, setSortConfig] = useState({ key: 'Campaign', direction: 'asc' });
+              const [editingCell, setEditingCell] = useState(null);
+              const [weeklySheets, setWeeklySheets] = useState([]);
+              const [currentSheet, setCurrentSheet] = useState(null);
+              const [loading, setLoading] = useState(true);
+              const [submitting, setSubmitting] = useState(false);
+              const chartRef = useRef(null);
+              const chartInstance = useRef(null);
+
+              useEffect(() => {
+                  fetchWeeklySheets();
+
+                  const interval = setInterval(() => {
+                      if (currentSheet) {
+                          fetchSheetData(currentSheet.id);
+                      }
+                  }, CONFIG.AUTO_REFRESH_INTERVAL);
+
+                  return () => clearInterval(interval);
+              }, []);
+
+              const fetchWeeklySheets = async () => {
+                  try {
+                      setLoading(true);
+                      const response = await fetch(
+                          `https://www.googleapis.com/drive/v3/files?` +
+                          `q='${CONFIG.GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+mimeType='application/v
+  nd.google-apps.spreadsheet'` +
+                          `&key=${CONFIG.GOOGLE_API_KEY}` +
+                          `&fields=files(id,name)` +
+                          `&orderBy=name desc`
+                      );
+
+                      if (!response.ok) {
+                          throw new Error('Failed to fetch sheets from Google Drive');
+                      }
+
+                      const data = await response.json();
+                      const sheets = data.files.map(file => ({
+                          id: file.id,
+                          name: file.name,
+                          weekNumber: extractWeekNumber(file.name)
+                      }));
+
+                      setWeeklySheets(sheets);
+
+                      if (sheets.length > 0) {
+                          const mostRecent = sheets[0];
+                          setCurrentSheet(mostRecent);
+                          await fetchSheetData(mostRecent.id);
+                      }
+                  } catch (error) {
+                      console.error('Error fetching weekly sheets:', error);
+                      alert('Error loading weekly reports. Please check console for details.');
+                  } finally {
+                      setLoading(false);
+                  }
+              };
+
+              const extractWeekNumber = (filename) => {
+                  const match = filename.match(/Week(\d+)/i);
+                  return match ? `Week ${match[1]}` : filename;
+              };
+
+              const fetchSheetData = async (sheetId) => {
+                  try {
+                      const response = await fetch(
+                          `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/USA!A:W?` +
+                          `key=${CONFIG.GOOGLE_API_KEY}`
+                      );
+
+                      if (!response.ok) {
+                          throw new Error('Failed to fetch sheet data');
+                      }
+
+                      const data = await response.json();
+                      const rows = data.values;
+
+                      if (!rows || rows.length === 0) {
+                          setReports([]);
+                          setFilteredData([]);
+                          return;
+                      }
+
+                      const headers = rows[0];
+                      const parsedData = rows.slice(1).map(row => {
+                          const obj = {};
+                          headers.forEach((header, index) => {
+                              obj[header] = row[index] || '';
+                          });
+                          return obj;
+                      }).filter(row => row.Campaign && row.Campaign !== '0');
+
+                      setReports(parsedData);
+                      setFilteredData(parsedData);
+                  } catch (error) {
+                      console.error('Error fetching sheet data:', error);
+                      alert('Error loading sheet data. Please check console for details.');
+                  }
+              };
+
+              const handleWeekChange = async (sheetId) => {
+                  const selectedSheet = weeklySheets.find(s => s.id === sheetId);
+                  setCurrentSheet(selectedSheet);
+                  setLoading(true);
+                  await fetchSheetData(sheetId);
+                  setLoading(false);
+              };
+
+              useEffect(() => {
+                  let filtered = reports;
+
+                  if (searchTerm) {
+                      filtered = filtered.filter(row => {
+                          const campaign = (row.Campaign || '').toLowerCase();
+                          const portfolio = (row.Portfolio || '').toLowerCase();
+                          return campaign.includes(searchTerm.toLowerCase()) ||
+                                 portfolio.includes(searchTerm.toLowerCase());
+                      });
+                  }
+
+                  if (portfolioFilter !== 'all') {
+                      filtered = filtered.filter(row => {
+                          return row.Portfolio === portfolioFilter;
+                      });
+                  }
+
+                  filtered = [...filtered].sort((a, b) => {
+                      if (sortConfig.key && sortConfig.key !== 'Campaign' && sortConfig.key !==
+  'Placement Type') {
+                          let aVal = a[sortConfig.key];
+                          let bVal = b[sortConfig.key];
+
+                          if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+                          if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+                          if (aVal === null || aVal === undefined) aVal = 0;
+                          if (bVal === null || bVal === undefined) bVal = 0;
+
+                          if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+                          if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+                      }
+
+                      const campaignA = (a.Campaign || '').toLowerCase();
+                      const campaignB = (b.Campaign || '').toLowerCase();
+
+                      if (campaignA !== campaignB) {
+                          return campaignA.localeCompare(campaignB);
+                      }
+
+                      const placementOrder = {
+                          'placement top': 1,
+                          'placement rest of search': 2,
+                          'placement product page': 3,
+                          'placement amazon business': 4
+                      };
+
+                      const placementA = (a['Placement Type'] || '').toLowerCase();
+                      const placementB = (b['Placement Type'] || '').toLowerCase();
+
+                      const orderA = placementOrder[placementA] || 999;
+                      const orderB = placementOrder[placementB] || 999;
+
+                      return orderA - orderB;
+                  });
+
+                  setFilteredData(filtered);
+              }, [reports, searchTerm, portfolioFilter, sortConfig]);
+
+              useEffect(() => {
+                  if (filteredData.length > 0 && chartRef.current) {
+                      createChart();
+                  }
+                  return () => {
+                      if (chartInstance.current) {
+                          chartInstance.current.destroy();
+                      }
+                  };
+              }, [filteredData]);
+
+              const createChart = () => {
+                  if (chartInstance.current) {
+                      chartInstance.current.destroy();
+                  }
+
+                  const ctx = chartRef.current.getContext('2d');
+
+                  const placementData = {};
+                  filteredData.forEach(row => {
+                      const placement = row['Placement Type'] || 'Unknown';
+                      const spend = parseFloat(row['Spend-7'] || 0);
+                      const clicks = parseFloat(row['Clicks-7'] || 0);
+
+                      if (!placementData[placement]) {
+                          placementData[placement] = { spend: 0, clicks: 0 };
+                      }
+                      placementData[placement].spend += spend;
+                      placementData[placement].clicks += clicks;
+                  });
+
+                  const labels = Object.keys(placementData);
+                  const spendData = labels.map(label => placementData[label].spend);
+                  const clicksData = labels.map(label => placementData[label].clicks);
+
+                  chartInstance.current = new Chart(ctx, {
+                      type: 'bar',
+                      data: {
+                          labels: labels.map(l => l.replace('Placement ', '')),
+                          datasets: [
+                              {
+                                  label: 'Spend (7d)',
+                                  data: spendData,
+                                  backgroundColor: 'rgba(0, 255, 148, 0.6)',
+                                  borderColor: 'rgba(0, 255, 148, 1)',
+                                  borderWidth: 2,
+                                  yAxisID: 'y'
+                              },
+                              {
+                                  label: 'Clicks (7d)',
+                                  data: clicksData,
+                                  backgroundColor: 'rgba(0, 149, 255, 0.6)',
+                                  borderColor: 'rgba(0, 149, 255, 1)',
+                                  borderWidth: 2,
+                                  yAxisID: 'y1'
+                              }
+                          ]
+                      },
+                      options: {
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          interaction: {
+                              mode: 'index',
+                              intersect: false,
+                          },
+                          plugins: {
+                              legend: {
+                                  labels: {
+                                      color: '#e5e7eb',
+                                      font: {
+                                          family: 'JetBrains Mono',
+                                          size: 10
+                                      }
+                                  }
+                              }
+                          },
+                          scales: {
+                              y: {
+                                  type: 'linear',
+                                  display: true,
+                                  position: 'left',
+                                  grid: { color: '#1f2937' },
+                                  ticks: {
+                                      color: '#00ff94',
+                                      font: { family: 'JetBrains Mono', size: 9 },
+                                      callback: function(value) { return '$' + value.toFixed(0); }
+                                  }
+                              },
+                              y1: {
+                                  type: 'linear',
+                                  display: true,
+                                  position: 'right',
+                                  grid: { drawOnChartArea: false },
+                                  ticks: {
+                                      color: '#0095ff',
+                                      font: { family: 'JetBrains Mono', size: 9 }
+                                  }
+                              },
+                              x: {
+                                  grid: { color: '#1f2937' },
+                                  ticks: {
+                                      color: '#9ca3af',
+                                      font: { family: 'JetBrains Mono', size: 9 }
+                                  }
+                              }
+                          }
+                      }
+                  });
+              };
+
+              const stats = (() => {
+                  const totalSpend7 = filteredData.reduce((sum, row) => sum +
+  parseFloat(row['Spend-7'] || 0), 0);
+                  const totalSpend30 = filteredData.reduce((sum, row) => sum +
+  parseFloat(row['Spend-30'] || 0), 0);
+                  const totalClicks7 = filteredData.reduce((sum, row) => sum +
+  parseFloat(row['Clicks-7'] || 0), 0);
+                  const totalOrders7 = filteredData.reduce((sum, row) => sum +
+  parseFloat(row['Orders-7'] || 0), 0);
+                  const cvr7 = totalClicks7 > 0 ? (totalOrders7 / totalClicks7 * 100) : 0;
+                  return { totalSpend7, totalSpend30, totalClicks7, totalOrders7, cvr7 };
+              })();
+
+              const getUniquePortfolios = () => {
+                  const portfolios = [...new Set(reports.map(r => r.Portfolio))].filter(Boolean);
+                  return portfolios.sort();
+              };
+
+              const handleSort = (key) => {
+                  setSortConfig(prevConfig => ({
+                      key,
+                      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' :
+  'asc'
+                  }));
+              };
+
+              const getPlacementBadge = (placement) => {
+                  const p = (placement || '').toLowerCase();
+                  if (p.includes('top')) return <span className="badge badge-top">TOP</span>;
+                  if (p.includes('product')) return <span className="badge badge-pp">PP</span>;
+                  if (p.includes('rest')) return <span className="badge badge-ros">ROS</span>;
+                  if (p.includes('business')) return <span className="badge
+  badge-business">BIZ</span>;
+                  return null;
+              };
+
+              const formatCurrency = (value) => {
+                  return new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: 'USD',
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                  }).format(value || 0);
+              };
+
+              const formatPercent = (value) => {
+                  if (typeof value === 'string' && value.includes('%')) return value;
+                  return `${(parseFloat(value) || 0).toFixed(2)}%`;
+              };
+
+              const handleChangeEdit = (index, newValue) => {
+                  const updatedReports = [...reports];
+                  const dataIndex = reports.findIndex((item) =>
+                      item.Campaign === filteredData[index].Campaign &&
+                      item['Placement Type'] === filteredData[index]['Placement Type']
+                  );
+
+                  if (dataIndex !== -1) {
+                      let cleanValue = newValue.trim();
+                      if (cleanValue && !isNaN(cleanValue)) {
+                          cleanValue = cleanValue + '%';
+                      }
+                      updatedReports[dataIndex]['Changes in placement'] = cleanValue;
+                      setReports(updatedReports);
+                  }
+                  setEditingCell(null);
+              };
+
+              const handleCellClick = (index) => setEditingCell(index);
+              const handleCampaignClick = (index) => setEditingCell('campaign-' + index);
+
+              const handleSubmitChanges = async () => {
+                  const changesData = reports.filter(row =>
+                      row['Changes in placement'] && row['Changes in placement'] !== '-' &&
+  row['Changes in placement'].trim() !== ''
+                  ).map(row => ({
+                      campaign: row.Campaign,
+                      portfolio: row.Portfolio,
+                      placement: row['Placement Type'],
+                      currentMultiplier: row['Increase bids by placement'],
+                      newMultiplier: row['Changes in placement'],
+                      week: currentSheet?.weekNumber || 'Unknown'
+                  }));
+
+                  if (changesData.length === 0) {
+                      alert('No changes to submit. Add multiplier percentages in the Changes column
+  first.');
+                      return;
+                  }
+
+                  if (!confirm(`Submit ${changesData.length} placement changes to Amazon Ads API?`)) {
+                      return;
+                  }
+
+                  try {
+                      setSubmitting(true);
+                      const response = await fetch(CONFIG.N8N_WEBHOOK_URL, {
+                          method: 'POST',
+                          mode: 'cors',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'Accept': 'application/json'
+                          },
+                          body: JSON.stringify({
+                              changes: changesData,
+                              timestamp: new Date().toISOString(),
+                              week: currentSheet?.weekNumber || 'Unknown'
+                          })
+                      });
+
+                      if (!response.ok) {
+                          const errorText = await response.text();
+                          throw new Error(`Server responded with ${response.status}: ${errorText}`);
+                      }
+
+                      const result = await response.json();
+
+                      // Build detailed success message
+                      let successMessage = `✅ Successfully Updated!\n\n`;
+                      successMessage += `Campaign: ${result.campaignName}\n`;
+                      successMessage += `Week: ${result.week}\n`;
+                      successMessage += `Total Changes: ${result.totalChanges}\n\n`;
+                      successMessage += `Changes Applied:\n`;
+
+                      result.changes.forEach(change => {
+                          const placementName = change.placement
+                              .replace('PLACEMENT_', '')
+                              .replace('SITE_AMAZON_', '')
+                              .replace(/_/g, ' ');
+                          successMessage += `  • ${placementName}: ${change.oldMultiplier}% →
+  ${change.newMultiplier}%\n`;
+                      });
+
+                      alert(successMessage);
+                      console.log('Submission result:', result);
+
+                  } catch (error) {
+                      console.error('Error submitting changes:', error);
+                      alert(`❌ Connection Error: Ensure n8n is active and CORS is
+  configured.\n\nDetail: ${error.message}`);
+                  } finally {
+                      setSubmitting(false);
+                  }
+              };
+
+              const getTrendArrow = (value30d, value7d, isACoS = false) => {
+                  const val30 = parseFloat(value30d) || 0;
+                  const val7 = parseFloat(value7d) || 0;
+                  if (val30 === 0) return null;
+                  const diff = val7 - val30;
+                  if (Math.abs(diff) < 3) return null;
+                  if (isACoS) {
+                      if (diff < -3) return <span style={{color: 'var(--accent-primary)', fontSize:
+  '0.9rem', marginLeft: '2px'}}>↓</span>;
+                      if (diff > 3) return <span style={{color: 'var(--accent-danger)', fontSize:
+  '0.9rem', marginLeft: '2px'}}>↑</span>;
+                  } else {
+                      if (diff > 3) return <span style={{color: 'var(--accent-primary)', fontSize:
+  '0.9rem', marginLeft: '2px'}}>↑</span>;
+                      if (diff < -3) return <span style={{color: 'var(--accent-danger)', fontSize:
+  '0.9rem', marginLeft: '2px'}}>↓</span>;
+                  }
+                  return null;
+              };
+
+              if (loading && weeklySheets.length === 0) {
+                  return (
+                      <div className="app-container">
+                          <div className="bg-grid"></div>
+                          <div className="content">
+                              <header>
+                                  <h1>Placement Optimizer</h1>
+                                  <p className="subtitle">Bid Multiplier Analysis Dashboard</p>
+                              </header>
+                              <div className="loading">
+                                  <div className="loading-spinner">⚙️</div>
+                                  <h3>Loading Weekly Reports...</h3>
+                                  <p>Fetching data from Google Drive</p>
+                              </div>
+                          </div>
+                      </div>
+                  );
+              }
+
+              return (
+                  <div className="app-container">
+                      <div className="bg-grid"></div>
+                      <div className="content">
+                          <header>
+                              <div style={{display: 'flex', justifyContent: 'space-between',
+  alignItems: 'center', flexWrap: 'wrap', gap: '1rem'}}>
+                                  <div>
+                                      <h1>Placement Optimizer</h1>
+                                      <p className="subtitle">Bid Multiplier Analysis Dashboard</p>
+                                  </div>
+                                  {weeklySheets.length > 0 && (
+                                      <div style={{display: 'flex', flexDirection: 'column', gap:
+  '0.5rem', alignItems: 'flex-end'}}>
+                                          <label style={{fontSize: '0.75rem', color:
+  'var(--text-secondary)', fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase'}}>
+                                              Select Week
+                                          </label>
+                                          <select
+                                              value={currentSheet?.id || ''}
+                                              onChange={(e) => handleWeekChange(e.target.value)}
+                                              style={{ minWidth: '200px', fontSize: '0.9rem', padding:
+   '0.5rem 1rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: '700' }}
+                                          >
+                                              {weeklySheets.map(sheet => (
+                                                  <option key={sheet.id} value={sheet.id}>
+                                                      {sheet.weekNumber}
+                                                  </option>
+                                              ))}
+                                          </select>
+                                      </div>
+                                  )}
+                              </div>
+                          </header>
+
+                          {reports.length === 0 ? (
+                              <div className="upload-zone">
+                                  <div className="upload-icon">📊</div>
+                                  <h3>No Data Available</h3>
+                                  <p style={{color: 'var(--text-secondary)', marginTop:
+  '0.5rem'}}>Waiting for weekly reports in Google Drive...</p>
+                              </div>
+                          ) : (
+                              <>
+                                  <div className="stats-grid">
+                                      <div className="stat-card">
+                                          <div className="stat-label">Spend (7d)</div>
+                                          <div
+  className="stat-value">{formatCurrency(stats.totalSpend7)}</div>
+                                          <div className="stat-detail">30d:
+  {formatCurrency(stats.totalSpend30)}</div>
+                                      </div>
+                                      <div className="stat-card">
+                                          <div className="stat-label">Clicks (7d)</div>
+                                          <div className="stat-value">{stats.totalClicks7}</div>
+                                          <div className="stat-detail">{stats.totalOrders7}
+  orders</div>
+                                      </div>
+                                      <div className="stat-card">
+                                          <div className="stat-label">CVR (7d)</div>
+                                          <div className="stat-value" style={{color: stats.cvr7 > 5 ?
+  'var(--accent-primary)' : 'var(--accent-warning)'}}>
+                                              {formatPercent(stats.cvr7)}
+                                          </div>
+                                          <div className="stat-detail">{filteredData.length}
+  placements</div>
+                                      </div>
+                                      <div className="stat-card">
+                                          <div className="stat-label">Current Week</div>
+                                          <div className="stat-value" style={{fontSize: '1.2rem'}}>
+                                              {currentSheet?.weekNumber || 'N/A'}
+                                          </div>
+                                          <div className="stat-detail">
+                                              {[...new Set(filteredData.map(r => r.Campaign))].length}
+   campaigns
+                                          </div>
+                                      </div>
+                                  </div>
+
+                                  <div style={{marginBottom: '1.5rem', display: 'flex',
+  justifyContent: 'flex-end'}}>
+                                      <button
+                                          onClick={handleSubmitChanges}
+                                          disabled={submitting}
+                                          className="btn"
+                                      >
+                                          {submitting ? '⏳ Submitting...' : '🚀 Submit Changes to
+  Amazon'}
+                                      </button>
+                                  </div>
+
+                                  <div className="chart-container">
+                                      <canvas ref={chartRef}></canvas>
+                                  </div>
+
+                                  <div className="data-table">
+                                      <div className="table-header">
+                                          <div className="table-title">Placement Details</div>
+                                          <div className="table-controls">
+                                              <input
+                                                  type="text"
+                                                  placeholder="Search campaigns..."
+                                                  value={searchTerm}
+                                                  onChange={(e) => setSearchTerm(e.target.value)}
+                                              />
+                                              <select
+                                                  value={portfolioFilter}
+                                                  onChange={(e) => setPortfolioFilter(e.target.value)}
+                                              >
+                                                  <option value="all">All Portfolios</option>
+                                                  {getUniquePortfolios().map(p => (
+                                                      <option key={p} value={p}>{p}</option>
+                                                  ))}
+                                              </select>
+                                          </div>
+                                      </div>
+                                      <div className="table-wrapper">
+                                          <table>
+                                              <thead>
+                                                  <tr>
+                                                      <th onClick={() =>
+  handleSort('Campaign')}>Campaign</th>
+                                                      <th onClick={() => handleSort('Placement
+  Type')}>Place</th>
+                                                      <th onClick={() =>
+  handleSort('Budget')}>Budget</th>
+                                                      <th onClick={() =>
+  handleSort('Clicks-30')}>Clicks<br/>30d</th>
+                                                      <th onClick={() =>
+  handleSort('Spend-30')}>Spend<br/>30d</th>
+                                                      <th onClick={() =>
+  handleSort('Orders-30')}>Orders<br/>30d</th>
+                                                      <th onClick={() =>
+  handleSort('CVR-30')}>CVR<br/>30d</th>
+                                                      <th onClick={() =>
+  handleSort('ACoS-30')}>ACoS<br/>30d</th>
+                                                      <th onClick={() =>
+  handleSort('Clicks-7')}>Clicks<br/>7d</th>
+                                                      <th onClick={() =>
+  handleSort('Spend-7')}>Spend<br/>7d</th>
+                                                      <th onClick={() =>
+  handleSort('Orders-7')}>Orders<br/>7d</th>
+                                                      <th onClick={() =>
+  handleSort('CVR-7')}>CVR<br/>7d</th>
+                                                      <th onClick={() =>
+  handleSort('ACOS-7')}>ACoS<br/>7d</th>
+                                                      <th onClick={() => handleSort('Spent DB
+  Yesterday')}>DB<br/>Yest</th>
+                                                      <th onClick={() => handleSort('Spent
+  Yesterday')}>Spent<br/>Yest</th>
+                                                      <th onClick={() => handleSort('Budget
+  Check')}>Budget<br/>Check</th>
+                                                      <th onClick={() => handleSort('Last 30
+  days')}>%<br/>30d</th>
+                                                      <th onClick={() => handleSort('Last 7
+  days')}>%<br/>7d</th>
+                                                      <th onClick={() =>
+  handleSort('Yesterday')}>%<br/>Yest</th>
+                                                      <th onClick={() => handleSort('Increase bids by
+  placement')}>Multi<br/>plier</th>
+                                                      <th onClick={() => handleSort('Changes in
+  placement')}>Changes</th>
+                                                  </tr>
+                                              </thead>
+                                              <tbody>
+                                                  {filteredData.slice(0, 200).map((row, index) => {
+                                                      const multiplier = row['Increase bids by
+  placement'];
+                                                      const isNewCampaignGroup = index > 0 &&
+                                                          filteredData[index - 1].Campaign !==
+  row.Campaign;
+
+                                                      return (
+                                                          <tr key={index}
+  className={isNewCampaignGroup ? 'campaign-group-separator' : ''}>
+                                                              <td style={{maxWidth: '150px'}}>
+                                                                  {editingCell === 'campaign-' + index
+   ? (
+                                                                      <div onClick={() =>
+  setEditingCell(null)} style={{ whiteSpace: 'normal', wordBreak: 'break-word', cursor: 'pointer',
+  background: 'rgba(0, 255, 148, 0.1)', padding: '0.25rem', borderRadius: '4px' }}>
+                                                                          {row.Campaign}
+                                                                      </div>
+                                                                  ) : (
+                                                                      <div onClick={() =>
+  handleCampaignClick(index)} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace:
+  'nowrap', cursor: 'pointer' }}>
+                                                                          {row.Campaign}
+                                                                      </div>
+                                                                  )}
+                                                              </td>
+                                                              <td style={{minWidth:
+  '60px'}}>{getPlacementBadge(row['Placement Type'])}</td>
+                                                              <td>{row.Budget || '-'}</td>
+                                                              <td
+  className="metric-group-30d">{row['Clicks-30'] || 0}</td>
+                                                              <td
+  className="metric-group-30d">{formatCurrency(row['Spend-30'])}</td>
+                                                              <td
+  className="metric-group-30d">{row['Orders-30'] || 0}</td>
+                                                              <td className={'metric-group-30d ' +
+  (parseFloat(row['CVR-30']) > 5 ? 'metric-positive' : '')}>{formatPercent(row['CVR-30'])}</td>
+                                                              <td className={'metric-group-30d ' +
+  (parseFloat(row['ACoS-30']) > 30 ? 'metric-negative' :
+  'metric-positive')}>{formatPercent(row['ACoS-30'])}</td>
+                                                              <td
+  className="metric-group-7d">{row['Clicks-7'] || 0}</td>
+                                                              <td
+  className="metric-group-7d">{formatCurrency(row['Spend-7'])}</td>
+                                                              <td
+  className="metric-group-7d">{row['Orders-7'] || 0}</td>
+                                                              <td className={'metric-group-7d ' +
+  (parseFloat(row['CVR-7']) > 5 ? 'metric-positive' :
+  '')}>{formatPercent(row['CVR-7'])}{getTrendArrow(row['CVR-30'], row['CVR-7'], false)}</td>
+                                                              <td className={'metric-group-7d ' +
+  (parseFloat(row['ACOS-7']) > 30 ? 'metric-negative' :
+  'metric-positive')}>{formatPercent(row['ACOS-7'])}{getTrendArrow(row['ACoS-30'], row['ACOS-7'],
+  true)}</td>
+                                                              <td>{formatCurrency(row['Spent DB
+  Yesterday'])}</td>
+                                                              <td>{formatCurrency(row['Spent
+  Yesterday'])}</td>
+                                                              <td>{row['Budget Check'] || '-'}</td>
+                                                              <td>{formatPercent(row['Last 30
+  days'])}</td>
+                                                              <td>{formatPercent(row['Last 7
+  days'])}</td>
+
+  <td>{formatPercent(row['Yesterday'])}</td>
+                                                              <td>{multiplier ? (<span
+  className="multiplier">{multiplier}%</span>) : '-'}</td>
+                                                              <td style={{maxWidth: '70px'}}>
+                                                                  {editingCell === index ? (
+                                                                      <input type="text"
+  defaultValue={(row['Changes in placement'] || '').toString().replace('%', '')} onBlur={(e) =>
+  handleChangeEdit(index, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter')
+  handleChangeEdit(index, e.target.value); else if (e.key === 'Escape') setEditingCell(null); }}
+  autoFocus style={{ width: '100%', background: 'var(--bg-dark)', border: '1px solid
+  var(--accent-primary)', color: 'var(--text-primary)', padding: '0.25rem', borderRadius: '4px',
+  fontSize: '0.75rem' }} />
+                                                                  ) : (
+                                                                      <span onClick={() =>
+  handleCellClick(index)} style={{ cursor: 'pointer', display: 'block', padding: '0.25rem'
+  }}>{row['Changes in placement'] || '-'}</span>
+                                                                  )}
+                                                              </td>
+                                                          </tr>
+                                                      );
+                                                  })}
+                                              </tbody>
+                                          </table>
+                                      </div>
+                                  </div>
+                              </>
+                          )}
+                      </div>
+                  </div>
+              );
+          }
+
+          ReactDOM.render(<PlacementDashboard />, document.getElementById('root'));
+      </script>
+  </body>
+  </html>
