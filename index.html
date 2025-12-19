@@ -36,7 +36,6 @@
             background: var(--bg-dark);
             color: var(--text-primary);
             line-height: 1.6;
-            overflow-x: hidden;
         }
 
         .app-container {
@@ -246,8 +245,8 @@
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 12px;
-            overflow: hidden;
             margin-bottom: 1.5rem;
+            /* Removed overflow: hidden to allow sticky header to work with page scroll */
         }
 
         .table-header {
@@ -287,7 +286,7 @@
         }
 
         .table-wrapper {
-            overflow-x: auto;
+            /* Removed overflow to allow sticky header to stick to browser window */
         }
 
         table {
@@ -307,7 +306,7 @@
             background: var(--bg-hover);
             border-bottom: 2px solid var(--border);
             padding: 0.5rem 0.3rem;
-            text-align: left;
+            text-align: center;
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.65rem;
             text-transform: uppercase;
@@ -328,6 +327,15 @@
             padding: 0.6rem 0.3rem;
             border-top: 1px solid var(--border);
             font-size: 0.75rem;
+            text-align: right;
+        }
+
+        th:first-child {
+            text-align: center;
+        }
+
+        td:first-child {
+            text-align: left;
         }
 
         tr {
@@ -369,6 +377,22 @@
             background: rgba(255, 149, 0, 0.08);
             color: var(--accent-warning);
             font-weight: 500;
+        }
+
+        th.metric-percent-group {
+            background: var(--bg-hover) !important;
+        }
+
+        .changes-input-active {
+            color: #ffff00 !important;
+            font-weight: 700 !important;
+            text-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
+        }
+
+        .acos-header {
+            color: var(--accent-primary) !important;
+            background: linear-gradient(rgba(0, 255, 148, 0.1), rgba(0, 255, 148, 0.1)), var(--bg-hover) !important;
+            border-bottom: 2px solid var(--accent-primary) !important;
         }
 
         tbody tr:hover .metric-group-30d,
@@ -488,6 +512,48 @@
             AUTO_REFRESH_INTERVAL: 300000 // 5 minutes
         };
 
+        const PlacementBadge = ({ placement, isExpanded, onToggle }) => {
+            const p = (placement || '').toLowerCase();
+            
+            const badgeStyle = { 
+                cursor: 'pointer', 
+                userSelect: 'none',
+                transition: 'all 0.2s ease',
+                display: 'inline-block',
+                whiteSpace: 'nowrap'
+            };
+
+            if (p.includes('top')) {
+                return (
+                    <span className="badge badge-top" onClick={onToggle} style={badgeStyle}>
+                        {isExpanded ? 'Top of Search' : 'TOP'}
+                    </span>
+                );
+            }
+            if (p.includes('product')) {
+                return (
+                    <span className="badge badge-pp" onClick={onToggle} style={badgeStyle}>
+                        {isExpanded ? 'Product Pages' : 'PP'}
+                    </span>
+                );
+            }
+            if (p.includes('rest')) {
+                return (
+                    <span className="badge badge-ros" onClick={onToggle} style={badgeStyle}>
+                        {isExpanded ? 'Rest of Search' : 'ROS'}
+                    </span>
+                );
+            }
+            if (p.includes('business')) {
+                return (
+                    <span className="badge badge-business" onClick={onToggle} style={badgeStyle}>
+                        {isExpanded ? 'Amazon Business' : 'BIZ'}
+                    </span>
+                );
+            }
+            return null;
+        };
+
         function PlacementDashboard() {
             const [reports, setReports] = useState([]);
             const [filteredData, setFilteredData] = useState([]);
@@ -499,8 +565,11 @@
             const [currentSheet, setCurrentSheet] = useState(null);
             const [loading, setLoading] = useState(true);
             const [submitting, setSubmitting] = useState(false);
+            const [isPlacementsExpanded, setIsPlacementsExpanded] = useState(false);
             const chartRef = useRef(null);
             const chartInstance = useRef(null);
+
+            const togglePlacements = () => setIsPlacementsExpanded(!isPlacementsExpanded);
 
             useEffect(() => {
                 fetchWeeklySheets();
@@ -602,7 +671,7 @@
             };
 
             useEffect(() => {
-                let filtered = reports;
+                let filtered = [...reports];
 
                 if (searchTerm) {
                     filtered = filtered.filter(row => {
@@ -619,45 +688,67 @@
                     });
                 }
 
-                filtered = [...filtered].sort((a, b) => {
-                    if (sortConfig.key && sortConfig.key !== 'Campaign' && sortConfig.key !== 'Placement Type') {
-                        let aVal = a[sortConfig.key];
-                        let bVal = b[sortConfig.key];
-
-                        if (typeof aVal === 'string') aVal = aVal.toLowerCase();
-                        if (typeof bVal === 'string') bVal = bVal.toLowerCase();
-                        
-                        if (aVal === null || aVal === undefined) aVal = 0;
-                        if (bVal === null || bVal === undefined) bVal = 0;
-
-                        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-                        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+                // GROUPED SORTING LOGIC
+                // 1. Group rows by Campaign
+                const groups = {};
+                filtered.forEach(row => {
+                    if (!groups[row.Campaign]) {
+                        groups[row.Campaign] = [];
                     }
-
-                    const campaignA = (a.Campaign || '').toLowerCase();
-                    const campaignB = (b.Campaign || '').toLowerCase();
-                    
-                    if (campaignA !== campaignB) {
-                        return campaignA.localeCompare(campaignB);
-                    }
-
-                    const placementOrder = {
-                        'placement top': 1,
-                        'placement rest of search': 2,
-                        'placement product page': 3,
-                        'placement amazon business': 4
-                    };
-
-                    const placementA = (a['Placement Type'] || '').toLowerCase();
-                    const placementB = (b['Placement Type'] || '').toLowerCase();
-
-                    const orderA = placementOrder[placementA] || 999;
-                    const orderB = placementOrder[placementB] || 999;
-
-                    return orderA - orderB;
+                    groups[row.Campaign].push(row);
                 });
 
-                setFilteredData(filtered);
+                // 2. Sort within each group (FIXED PLACEMENT ORDER)
+                const placementOrder = {
+                    'placement top': 1,
+                    'placement rest of search': 2,
+                    'placement product page': 3,
+                    'placement amazon business': 4
+                };
+
+                Object.values(groups).forEach(groupRows => {
+                    groupRows.sort((a, b) => {
+                        const orderA = placementOrder[(a['Placement Type'] || '').toLowerCase()] || 999;
+                        const orderB = placementOrder[(b['Placement Type'] || '').toLowerCase()] || 999;
+                        return orderA - orderB;
+                    });
+                });
+
+                // 3. Sort the groups themselves based on the sortConfig
+                const sortedGroupKeys = Object.keys(groups).sort((keyA, keyB) => {
+                    const groupA = groups[keyA];
+                    const groupB = groups[keyB];
+
+                    if (sortConfig.key === 'Campaign') {
+                        return sortConfig.direction === 'asc' 
+                            ? keyA.localeCompare(keyB) 
+                            : keyB.localeCompare(keyA);
+                    }
+
+                    // For metrics, sum the value for the entire group to determine group rank
+                    const getSum = (group) => group.reduce((sum, row) => {
+                        let val = row[sortConfig.key];
+                        if (typeof val === 'string') {
+                            val = parseFloat(val.replace(/[^0-9.-]/g, '')) || 0;
+                        }
+                        return sum + (parseFloat(val) || 0);
+                    }, 0);
+
+                    const sumA = getSum(groupA);
+                    const sumB = getSum(groupB);
+
+                    if (sumA < sumB) return sortConfig.direction === 'asc' ? -1 : 1;
+                    if (sumA > sumB) return sortConfig.direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+
+                // 4. Flatten the sorted groups back into a single array
+                const finalSortedData = [];
+                sortedGroupKeys.forEach(key => {
+                    finalSortedData.push(...groups[key]);
+                });
+
+                setFilteredData(finalSortedData);
             }, [reports, searchTerm, portfolioFilter, sortConfig]);
 
             useEffect(() => {
@@ -789,15 +880,6 @@
                     key,
                     direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
                 }));
-            };
-
-            const getPlacementBadge = (placement) => {
-                const p = (placement || '').toLowerCase();
-                if (p.includes('top')) return <span className="badge badge-top">TOP</span>;
-                if (p.includes('product')) return <span className="badge badge-pp">PP</span>;
-                if (p.includes('rest')) return <span className="badge badge-ros">ROS</span>;
-                if (p.includes('business')) return <span className="badge badge-business">BIZ</span>;
-                return null;
             };
 
             const formatCurrency = (value) => {
@@ -1041,24 +1123,24 @@
                                             <thead>
                                                 <tr>
                                                     <th onClick={() => handleSort('Campaign')}>Campaign</th>
-                                                    <th onClick={() => handleSort('Placement Type')}>Place</th>
                                                     <th onClick={() => handleSort('Budget')}>Budget</th>
                                                     <th onClick={() => handleSort('Clicks-30')}>Clicks<br/>30d</th>
                                                     <th onClick={() => handleSort('Spend-30')}>Spend<br/>30d</th>
                                                     <th onClick={() => handleSort('Orders-30')}>Orders<br/>30d</th>
                                                     <th onClick={() => handleSort('CVR-30')}>CVR<br/>30d</th>
-                                                    <th onClick={() => handleSort('ACoS-30')}>ACoS<br/>30d</th>
+                                                    <th className="acos-header" onClick={() => handleSort('ACoS-30')}>ACoS<br/>30d</th>
                                                     <th onClick={() => handleSort('Clicks-7')}>Clicks<br/>7d</th>
                                                     <th onClick={() => handleSort('Spend-7')}>Spend<br/>7d</th>
                                                     <th onClick={() => handleSort('Orders-7')}>Orders<br/>7d</th>
                                                     <th onClick={() => handleSort('CVR-7')}>CVR<br/>7d</th>
-                                                    <th onClick={() => handleSort('ACOS-7')}>ACoS<br/>7d</th>
+                                                    <th className="acos-header" onClick={() => handleSort('ACOS-7')}>ACoS<br/>7d</th>
                                                     <th onClick={() => handleSort('Spent DB Yesterday')}>DB<br/>Yest</th>
                                                     <th onClick={() => handleSort('Spent Yesterday')}>Spent<br/>Yest</th>
                                                     <th onClick={() => handleSort('Budget Check')}>Budget<br/>Check</th>
                                                     <th className="metric-percent-group" onClick={() => handleSort('Last 30 days')}>LAST<br/>30D</th>
                                                     <th className="metric-percent-group" onClick={() => handleSort('Last 7 days')}>LAST<br/>7D</th>
                                                     <th className="metric-percent-group" onClick={() => handleSort('Yesterday')}>YEST</th>
+                                                    <th onClick={() => handleSort('Placement Type')}>Place</th>
                                                     <th onClick={() => handleSort('Increase bids by placement')}>Multi<br/>plier</th>
                                                     <th onClick={() => handleSort('Changes in placement')}>Changes</th>
                                                 </tr>
@@ -1082,7 +1164,6 @@
                                                                     </div>
                                                                 )}
                                                             </td>
-                                                            <td style={{minWidth: '60px'}}>{getPlacementBadge(row['Placement Type'])}</td>
                                                             <td>{row.Budget || '-'}</td>
                                                             <td className="metric-group-30d">{row['Clicks-30'] || 0}</td>
                                                             <td className="metric-group-30d">{formatCurrency(row['Spend-30'])}</td>
@@ -1100,12 +1181,25 @@
                                                             <td className="metric-percent-group">{formatPercent(row['Last 30 days'])}</td>
                                                             <td className="metric-percent-group">{formatPercent(row['Last 7 days'])}</td>
                                                             <td className="metric-percent-group">{formatPercent(row['Yesterday'])}</td>
+                                                            <td style={{minWidth: '60px'}}>
+                                                                <PlacementBadge 
+                                                                    placement={row['Placement Type']} 
+                                                                    isExpanded={isPlacementsExpanded}
+                                                                    onToggle={togglePlacements}
+                                                                />
+                                                            </td>
                                                             <td>{multiplier ? (<span className="multiplier">{multiplier}%</span>) : '-'}</td>
                                                             <td style={{maxWidth: '70px'}}>
                                                                 {editingCell === index ? (
                                                                     <input type="text" defaultValue={(row['Changes in placement'] || '').toString().replace('%', '')} onBlur={(e) => handleChangeEdit(index, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleChangeEdit(index, e.target.value); else if (e.key === 'Escape') setEditingCell(null); }} autoFocus style={{ width: '100%', background: 'var(--bg-dark)', border: '1px solid var(--accent-primary)', color: 'var(--text-primary)', padding: '0.25rem', borderRadius: '4px', fontSize: '0.75rem' }} />
                                                                 ) : (
-                                                                    <span onClick={() => handleCellClick(index)} style={{ cursor: 'pointer', display: 'block', padding: '0.25rem' }}>{row['Changes in placement'] || '-'}</span>
+                                                                    <span 
+                                                                        onClick={() => handleCellClick(index)} 
+                                                                        className={(row['Changes in placement'] && row['Changes in placement'] !== '-') ? 'changes-input-active' : ''}
+                                                                        style={{ cursor: 'pointer', display: 'block', padding: '0.25rem' }}
+                                                                    >
+                                                                        {row['Changes in placement'] || '-'}
+                                                                    </span>
                                                                 )}
                                                             </td>
                                                         </tr>
