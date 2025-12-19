@@ -389,6 +389,12 @@
             text-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
         }
 
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+
         .acos-header {
             color: var(--accent-primary) !important;
             background: linear-gradient(rgba(0, 255, 148, 0.1), rgba(0, 255, 148, 0.1)), var(--bg-hover) !important;
@@ -566,6 +572,8 @@
             const [loading, setLoading] = useState(true);
             const [submitting, setSubmitting] = useState(false);
             const [isPlacementsExpanded, setIsPlacementsExpanded] = useState(false);
+            const [localEditValue, setLocalEditValue] = useState('');
+            const [warningRows, setWarningRows] = useState(new Set());
             const chartRef = useRef(null);
             const chartInstance = useRef(null);
 
@@ -912,16 +920,53 @@
                 
                 if (dataIndex !== -1) {
                     let cleanValue = newValue.trim();
+                    
+                    // Validation: Stop changes over 1000%
                     if (cleanValue && !isNaN(cleanValue)) {
+                        const numValue = parseFloat(cleanValue);
+                        if (numValue > 1000) {
+                            alert('⚠️ Safety Limit: Bid changes cannot exceed 1000%. Value has been reset.');
+                            setEditingCell(null);
+                            setLocalEditValue('');
+                            const newWarnings = new Set(warningRows);
+                            newWarnings.delete(index);
+                            setWarningRows(newWarnings);
+                            return;
+                        }
+                        
+                        if (numValue > 900) {
+                            const newWarnings = new Set(warningRows);
+                            newWarnings.add(index);
+                            setWarningRows(newWarnings);
+                        } else {
+                            if (warningRows.has(index)) {
+                                const newWarnings = new Set(warningRows);
+                                newWarnings.delete(index);
+                                setWarningRows(newWarnings);
+                            }
+                        }
+                        
                         cleanValue = cleanValue + '%';
+                    } else {
+                        if (warningRows.has(index)) {
+                            const newWarnings = new Set(warningRows);
+                            newWarnings.delete(index);
+                            setWarningRows(newWarnings);
+                        }
                     }
+                    
                     updatedReports[dataIndex]['Changes in placement'] = cleanValue;
                     setReports(updatedReports);
                 }
                 setEditingCell(null);
+                setLocalEditValue('');
             };
 
-            const handleCellClick = (index) => setEditingCell(index);
+            const handleCellClick = (index) => {
+                setEditingCell(index);
+                const currentVal = (filteredData[index]['Changes in placement'] || '').toString().replace('%', '');
+                setLocalEditValue(currentVal);
+            };
             const handleCampaignClick = (index) => setEditingCell('campaign-' + index);
 
             // EDITED FUNCTION TO FIX CORS Handshake
@@ -983,7 +1028,7 @@
             const getTrendArrow = (value30d, value7d, isACoS = false) => {
                 const val30 = parseFloat(value30d) || 0;
                 const val7 = parseFloat(value7d) || 0;
-                if (val30 === 0) return null;
+                if (val30 === 0 || val7 === 0) return null; // Don't show arrows for 0% values
                 const diff = val7 - val30;
                 if (Math.abs(diff) < 3) return null;
                 if (isACoS) {
@@ -1169,12 +1214,17 @@
                                                             <td className="metric-group-30d">{formatCurrency(row['Spend-30'])}</td>
                                                             <td className="metric-group-30d">{row['Orders-30'] || 0}</td>
                                                             <td className={'metric-group-30d ' + (parseFloat(row['CVR-30']) > 5 ? 'metric-positive' : '')}>{formatPercent(row['CVR-30'])}</td>
-                                                            <td className={'metric-group-30d ' + (parseFloat(row['ACoS-30']) > 30 ? 'metric-negative' : 'metric-positive')}>{formatPercent(row['ACoS-30'])}</td>
+                                                            <td className={'metric-group-30d ' + (parseFloat(row['ACoS-30']) > 30 ? 'metric-negative' : 'metric-positive')}>
+                                                                {formatPercent(row['ACoS-30'])}
+                                                            </td>
                                                             <td className="metric-group-7d">{row['Clicks-7'] || 0}</td>
                                                             <td className="metric-group-7d">{formatCurrency(row['Spend-7'])}</td>
                                                             <td className="metric-group-7d">{row['Orders-7'] || 0}</td>
                                                             <td className={'metric-group-7d ' + (parseFloat(row['CVR-7']) > 5 ? 'metric-positive' : '')}>{formatPercent(row['CVR-7'])}{getTrendArrow(row['CVR-30'], row['CVR-7'], false)}</td>
-                                                            <td className={'metric-group-7d ' + (parseFloat(row['ACOS-7']) > 30 ? 'metric-negative' : 'metric-positive')}>{formatPercent(row['ACOS-7'])}{getTrendArrow(row['ACoS-30'], row['ACOS-7'], true)}</td>
+                                                            <td className={'metric-group-7d ' + (parseFloat(row['ACOS-7']) > 30 ? 'metric-negative' : 'metric-positive')}>
+                                                                {formatPercent(row['ACOS-7'])}
+                                                                {getTrendArrow(row['ACoS-30'], row['ACOS-7'], true)}
+                                                            </td>
                                                             <td>{formatCurrency(row['Spent DB Yesterday'])}</td>
                                                             <td>{formatCurrency(row['Spent Yesterday'])}</td>
                                                             <td>{row['Budget Check'] || '-'}</td>
@@ -1189,17 +1239,70 @@
                                                                 />
                                                             </td>
                                                             <td>{multiplier ? (<span className="multiplier">{multiplier}%</span>) : '-'}</td>
-                                                            <td style={{maxWidth: '70px'}}>
+                                                            <td style={{maxWidth: '70px', position: 'relative'}}>
                                                                 {editingCell === index ? (
-                                                                    <input type="text" defaultValue={(row['Changes in placement'] || '').toString().replace('%', '')} onBlur={(e) => handleChangeEdit(index, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleChangeEdit(index, e.target.value); else if (e.key === 'Escape') setEditingCell(null); }} autoFocus style={{ width: '100%', background: 'var(--bg-dark)', border: '1px solid var(--accent-primary)', color: 'var(--text-primary)', padding: '0.25rem', borderRadius: '4px', fontSize: '0.75rem' }} />
+                                                                    <>
+                                                                        <input 
+                                                                            type="text" 
+                                                                            defaultValue={(row['Changes in placement'] || '').toString().replace('%', '')} 
+                                                                            onBlur={(e) => handleChangeEdit(index, e.target.value)} 
+                                                                            onChange={(e) => setLocalEditValue(e.target.value)}
+                                                                            onKeyDown={(e) => { 
+                                                                                if (e.key === 'Enter') handleChangeEdit(index, e.target.value); 
+                                                                                else if (e.key === 'Escape') setEditingCell(null); 
+                                                                            }} 
+                                                                            autoFocus 
+                                                                            style={{ width: '100%', background: 'var(--bg-dark)', border: '1px solid var(--accent-primary)', color: 'var(--text-primary)', padding: '0.25rem', borderRadius: '4px', fontSize: '0.75rem' }} 
+                                                                        />
+                                                                        {(parseFloat(localEditValue) > 900 || warningRows.has(index)) && (
+                                                                            <div style={{
+                                                                                position: 'absolute',
+                                                                                bottom: '120%',
+                                                                                right: 0,
+                                                                                background: '#ff3366',
+                                                                                color: 'white',
+                                                                                padding: '6px 12px',
+                                                                                borderRadius: '6px',
+                                                                                fontSize: '11px',
+                                                                                fontWeight: 'bold',
+                                                                                whiteSpace: 'nowrap',
+                                                                                zIndex: 100,
+                                                                                boxShadow: '0 4px 15px rgba(255, 51, 102, 0.6)',
+                                                                                animation: 'shake 0.4s ease-in-out infinite'
+                                                                            }}>
+                                                                                💸 DANGER! YOU ARE BUYING BEZOS ANOTHER YACHT! 🛥️
+                                                                            </div>
+                                                                        )}
+                                                                    </>
                                                                 ) : (
-                                                                    <span 
-                                                                        onClick={() => handleCellClick(index)} 
-                                                                        className={(row['Changes in placement'] && row['Changes in placement'] !== '-') ? 'changes-input-active' : ''}
-                                                                        style={{ cursor: 'pointer', display: 'block', padding: '0.25rem' }}
-                                                                    >
-                                                                        {row['Changes in placement'] || '-'}
-                                                                    </span>
+                                                                    <div style={{position: 'relative'}}>
+                                                                        <span 
+                                                                            onClick={() => handleCellClick(index)} 
+                                                                            className={(row['Changes in placement'] && row['Changes in placement'] !== '-') ? 'changes-input-active' : ''}
+                                                                            style={{ cursor: 'pointer', display: 'block', padding: '0.25rem' }}
+                                                                        >
+                                                                            {row['Changes in placement'] || '-'}
+                                                                        </span>
+                                                                        {warningRows.has(index) && (
+                                                                            <div style={{
+                                                                                position: 'absolute',
+                                                                                bottom: '120%',
+                                                                                right: 0,
+                                                                                background: '#ff3366',
+                                                                                color: 'white',
+                                                                                padding: '6px 12px',
+                                                                                borderRadius: '6px',
+                                                                                fontSize: '11px',
+                                                                                fontWeight: 'bold',
+                                                                                whiteSpace: 'nowrap',
+                                                                                zIndex: 100,
+                                                                                boxShadow: '0 4px 15px rgba(255, 51, 102, 0.6)',
+                                                                                animation: 'shake 0.4s ease-in-out infinite'
+                                                                            }}>
+                                                                                💸 DANGER! YOU ARE BUYING BEZOS ANOTHER YACHT! 🛥️
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 )}
                                                             </td>
                                                         </tr>
