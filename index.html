@@ -855,6 +855,7 @@
             const [passwordInput, setPasswordInput] = useState('');
             const [passwordError, setPasswordError] = useState(false);
             const [showPassword, setShowPassword] = useState(false);
+            const [showBizPlacements, setShowBizPlacements] = useState(true);
             const chartRef = useRef(null);
             const chartInstance = useRef(null);
 
@@ -1005,7 +1006,7 @@
                     filtered = filtered.filter(row => {
                         const campaign = (row.Campaign || '').toLowerCase();
                         const portfolio = (row.Portfolio || '').toLowerCase();
-                        return campaign.includes(searchTerm.toLowerCase()) || 
+                        return campaign.includes(searchTerm.toLowerCase()) ||
                                portfolio.includes(searchTerm.toLowerCase());
                     });
                 }
@@ -1013,6 +1014,13 @@
                 if (portfolioFilter !== 'all') {
                     filtered = filtered.filter(row => {
                         return row.Portfolio === portfolioFilter;
+                    });
+                }
+
+                if (!showBizPlacements) {
+                    filtered = filtered.filter(row => {
+                        const placement = (row['Placement Type'] || '').toLowerCase();
+                        return !placement.includes('business');
                     });
                 }
 
@@ -1077,7 +1085,7 @@
                 });
 
                 setFilteredData(finalSortedData);
-            }, [reports, searchTerm, portfolioFilter, sortConfig]);
+            }, [reports, searchTerm, portfolioFilter, sortConfig, showBizPlacements]);
 
             useEffect(() => {
                 if (filteredData.length > 0 && chartRef.current) {
@@ -1532,6 +1540,20 @@
                                                     <option key={p} value={p}>{p}</option>
                                                 ))}
                                             </select>
+                                            <button
+                                                onClick={() => setShowBizPlacements(!showBizPlacements)}
+                                                className="btn"
+                                                style={{
+                                                    padding: '0.5rem 1rem',
+                                                    fontSize: '0.75rem',
+                                                    whiteSpace: 'nowrap',
+                                                    background: showBizPlacements ? 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))' : 'var(--bg-dark)',
+                                                    color: showBizPlacements ? 'var(--bg-dark)' : 'var(--text-secondary)',
+                                                    border: showBizPlacements ? 'none' : '1px solid var(--border)'
+                                                }}
+                                            >
+                                                {showBizPlacements ? '✓ Show Biz' : '✗ Hide Biz'}
+                                            </button>
                                         </div>
                                     </div>
                                     <div className="mobile-scroll-hint">
