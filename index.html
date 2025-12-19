@@ -491,6 +491,81 @@
             50% { opacity: 0.6; }
         }
 
+        .password-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .password-box {
+            background: var(--bg-card);
+            border: 2px solid var(--accent-primary);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 8px 40px rgba(0, 255, 148, 0.3);
+            animation: slideDown 0.6s ease-out;
+        }
+
+        .password-box h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .password-box p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .password-input-group {
+            margin-bottom: 1rem;
+        }
+
+        .password-input {
+            width: 100%;
+            background: var(--bg-dark);
+            border: 2px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            transition: all 0.3s ease;
+        }
+
+        .password-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 255, 148, 0.1);
+        }
+
+        .password-error {
+            color: var(--accent-danger);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            font-weight: 600;
+            display: none;
+        }
+
+        .password-error.show {
+            display: block;
+            animation: shake 0.4s ease-in-out;
+        }
+
         /* Mobile-specific improvements */
         @media (max-width: 767px) {
             .mobile-scroll-hint {
@@ -700,9 +775,9 @@
 
         const PlacementBadge = ({ placement, isExpanded, onToggle }) => {
             const p = (placement || '').toLowerCase();
-            
-            const badgeStyle = { 
-                cursor: 'pointer', 
+
+            const badgeStyle = {
+                cursor: 'pointer',
                 userSelect: 'none',
                 transition: 'all 0.2s ease',
                 display: 'inline-block',
@@ -754,22 +829,64 @@
             const [isPlacementsExpanded, setIsPlacementsExpanded] = useState(false);
             const [localEditValue, setLocalEditValue] = useState('');
             const [warningRows, setWarningRows] = useState(new Set());
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [passwordInput, setPasswordInput] = useState('');
+            const [passwordError, setPasswordError] = useState(false);
             const chartRef = useRef(null);
             const chartInstance = useRef(null);
 
-            const togglePlacements = () => setIsPlacementsExpanded(!isPlacementsExpanded);
+            // Password hash (SHA-256 of your password)
+            // To set your own password, go to: https://emn178.github.io/online-tools/sha256.html
+            // Enter your desired password, copy the hash, and replace the value below
+            const PASSWORD_HASH = '57c5e113ed86c7e5040fe7dc884f0156d317f7afd1ac6e45e15dc2702304d958'; // CHANGE THIS!
 
             useEffect(() => {
-                fetchWeeklySheets();
-                
-                const interval = setInterval(() => {
-                    if (currentSheet) {
-                        fetchSheetData(currentSheet.id);
-                    }
-                }, CONFIG.AUTO_REFRESH_INTERVAL);
-
-                return () => clearInterval(interval);
+                // Check if already authenticated in this session
+                const auth = sessionStorage.getItem('bidflow_auth');
+                if (auth === PASSWORD_HASH) {
+                    setIsAuthenticated(true);
+                }
             }, []);
+
+            const togglePlacements = () => setIsPlacementsExpanded(!isPlacementsExpanded);
+
+            const handlePasswordSubmit = async (e) => {
+                e.preventDefault();
+                setPasswordError(false);
+
+                // Simple SHA-256 hash function
+                const hashPassword = async (password) => {
+                    const msgBuffer = new TextEncoder().encode(password);
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                };
+
+                const hashedInput = await hashPassword(passwordInput);
+
+                if (hashedInput === PASSWORD_HASH) {
+                    sessionStorage.setItem('bidflow_auth', hashedInput);
+                    setIsAuthenticated(true);
+                    setPasswordInput('');
+                } else {
+                    setPasswordError(true);
+                    setPasswordInput('');
+                }
+            };
+
+            useEffect(() => {
+                if (isAuthenticated) {
+                    fetchWeeklySheets();
+
+                    const interval = setInterval(() => {
+                        if (currentSheet) {
+                            fetchSheetData(currentSheet.id);
+                        }
+                    }, CONFIG.AUTO_REFRESH_INTERVAL);
+
+                    return () => clearInterval(interval);
+                }
+            }, [isAuthenticated]);
 
             const fetchWeeklySheets = async () => {
                 try {
@@ -1151,7 +1268,13 @@
 
             // EDITED FUNCTION TO FIX CORS Handshake
             const handleSubmitChanges = async () => {
-                const changesData = reports.filter(row => 
+                // Extra security check
+                if (!isAuthenticated) {
+                    alert('⛔ Authentication required to submit changes.');
+                    return;
+                }
+
+                const changesData = reports.filter(row =>
                     row['Changes in placement'] && row['Changes in placement'] !== '-' && row['Changes in placement'].trim() !== ''
                 ).map(row => ({
                     campaign: row.Campaign,
@@ -1220,6 +1343,36 @@
                 }
                 return null;
             };
+
+            // Password gate - show before anything else
+            if (!isAuthenticated) {
+                return (
+                    <div className="password-overlay">
+                        <div className="password-box">
+                            <h2>🔒 BidFlow Access</h2>
+                            <p>Enter password to access the dashboard</p>
+                            <form onSubmit={handlePasswordSubmit}>
+                                <div className="password-input-group">
+                                    <input
+                                        type="password"
+                                        className="password-input"
+                                        placeholder="Enter password..."
+                                        value={passwordInput}
+                                        onChange={(e) => setPasswordInput(e.target.value)}
+                                        autoFocus
+                                    />
+                                </div>
+                                <button type="submit" className="btn" style={{width: '100%'}}>
+                                    Unlock Dashboard
+                                </button>
+                                <div className={`password-error ${passwordError ? 'show' : ''}`}>
+                                    ❌ Incorrect password. Please try again.
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
 
             if (loading && weeklySheets.length === 0) {
                 return (
