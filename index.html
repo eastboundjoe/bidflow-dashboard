@@ -871,7 +871,8 @@
                         body: JSON.stringify({
                             changes: changesData,
                             timestamp: new Date().toISOString(),
-                            week: currentSheet?.weekNumber || 'Unknown'
+                            week: currentSheet?.weekNumber || 'Unknown',
+                            sheetId: currentSheet?.id || ''
                         })
                     });
 
