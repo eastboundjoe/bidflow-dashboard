@@ -1188,8 +1188,19 @@
                             x: {
                                 grid: { color: '#1f2937' },
                                 ticks: {
-                                    color: '#9ca3af',
-                                    font: { family: 'JetBrains Mono', size: 9 }
+                                    color: function(context) {
+                                        const label = context.tick.label.toLowerCase();
+                                        if (label.includes('top')) return '#00ff94'; // Green
+                                        if (label.includes('rest')) return '#ff9500'; // Orange
+                                        if (label.includes('product')) return '#0095ff'; // Blue
+                                        if (label.includes('business')) return '#ff3366'; // Red
+                                        return '#9ca3af'; // Default gray
+                                    },
+                                    font: {
+                                        family: 'JetBrains Mono',
+                                        size: 9,
+                                        weight: 'bold'
+                                    }
                                 }
                             }
                         }
