@@ -1317,7 +1317,7 @@
                 }
 
                 const changesData = reports.filter(row =>
-                    row['Changes in placement'] && row['Changes in placement'] !== '-' && row['Changes in placement'].trim() !== ''
+                    row['Changes in placement'] && row['Changes in placement'] !== '0' && row['Changes in placement'] !== '0%' && row['Changes in placement'].trim() !== ''
                 ).map(row => ({
                     campaign: row.Campaign,
                     portfolio: row.Portfolio,
@@ -1683,12 +1683,12 @@
                                                                     </>
                                                                 ) : (
                                                                     <div style={{position: 'relative'}}>
-                                                                        <span 
-                                                                            onClick={() => handleCellClick(index)} 
-                                                                            className={(row['Changes in placement'] && row['Changes in placement'] !== '-') ? 'changes-input-active' : ''}
+                                                                        <span
+                                                                            onClick={() => handleCellClick(index)}
+                                                                            className={(row['Changes in placement'] && row['Changes in placement'] !== '0') ? 'changes-input-active' : ''}
                                                                             style={{ cursor: 'pointer', display: 'block', padding: '0.25rem' }}
                                                                         >
-                                                                            {row['Changes in placement'] || '-'}
+                                                                            {row['Changes in placement'] || '0'}
                                                                         </span>
                                                                         {warningRows.has(index) && (
                                                                             <div style={{
