@@ -1202,6 +1202,8 @@
 
             const handleStoreCredentials = async (e) => {
                 e.preventDefault();
+                alert('Please use the "Authorize Amazon Account" button for secure automated setup.');
+                /* Deprecated: store_amazon_credentials removed
                 setLoading(true);
                 try {
                     const { data, error } = await supabase.rpc('store_amazon_credentials', {
@@ -1216,6 +1218,7 @@
                     await fetchCredentials();
                 } catch (error) { alert('❌ Failed to store credentials: ' + error.message); }
                 finally { setLoading(false); }
+                */
             };
 
             const triggerDataCollection = async () => {
