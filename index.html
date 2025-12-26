@@ -1122,8 +1122,17 @@
                     console.log('Edge Function response:', { data, error });
 
                     if (error) {
-                        // Show the actual error from the response
-                        const errorMsg = error.message || JSON.stringify(error);
+                        // Extract the actual error message from the response body
+                        let errorMsg = error.message;
+                        if (error.context && error.context instanceof Response) {
+                            try {
+                                const errorBody = await error.context.json();
+                                console.log('Error response body:', errorBody);
+                                errorMsg = errorBody.error || errorMsg;
+                            } catch (e) {
+                                console.error('Failed to parse error response:', e);
+                            }
+                        }
                         throw new Error(errorMsg);
                     }
                     if (data?.error) {
