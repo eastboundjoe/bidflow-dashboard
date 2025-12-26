@@ -1033,6 +1033,7 @@
             const [credentials, setCredentials] = useState(null);
             const [showCredentialForm, setShowCredentialForm] = useState(false);
             const [showUnsubscribePage, setShowUnsubscribePage] = useState(false);
+            const [authorizingAmazon, setAuthorizingAmazon] = useState(false);
             const [formData, setFormData] = useState({ clientId: '', clientSecret: '', refreshToken: '', profileId: '' });
 
             // Email Auth State
@@ -1170,22 +1171,24 @@
             };
 
             const authorizeAmazon = async () => {
+                setAuthorizingAmazon(true);
+
                 const clientId = 'amzn1.application-oa2-client.3bfbe7fd974d4a8f96d30372640e2701';
                 const redirectUri = window.location.origin + '/';
                 const scope = 'advertising::campaign_management';
-                
+
                 // PKCE Generation
                 const verifier = generateRandomString(64);
                 sessionStorage.setItem('amz_code_verifier', verifier);
-                
+
                 const challengeBuffer = await sha256(verifier);
                 const challenge = base64urlencode(challengeBuffer);
-                
+
                 const state = generateRandomString(16);
                 sessionStorage.setItem('amz_auth_state', state);
 
                 const authUrl = `https://www.amazon.com/ap/oa?client_id=${clientId}&scope=${scope}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&code_challenge=${challenge}&code_challenge_method=S256`;
-                
+
                 window.location.href = authUrl;
             };
 
@@ -1420,8 +1423,6 @@
                     <div className="setup-card">
                         <div className="header">
                             <h2>Welcome, {session.user.email}!</h2>
-                            <button className="btn-small-ghost" onClick={signOut}>Sign out</button>
-                            <button className="btn-small-ghost" style={{color: '#dc2626'}} onClick={() => setShowUnsubscribePage(true)}>Unsubscribe</button>
                         </div>
                         <div className="status-badge inactive">⚠️ Amazon Ads credentials required</div>
                         
@@ -1432,8 +1433,16 @@
                                     className="btn-primary"
                                     onClick={authorizeAmazon}
                                     style={{marginBottom: '1rem'}}
+                                    disabled={authorizingAmazon}
                                 >
-                                    🔑 Authorize Amazon Account
+                                    {authorizingAmazon ? (
+                                        <>
+                                            <div className="spinner" style={{width: '16px', height: '16px', marginRight: '8px'}}></div>
+                                            Connecting to Amazon...
+                                        </>
+                                    ) : (
+                                        '🔑 Authorize Amazon Account'
+                                    )}
                                 </button>
                                 <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>
                                     OR <span onClick={() => setShowCredentialForm(true)} style={{textDecoration: 'underline', cursor: 'pointer', color: 'var(--accent-primary)'}}>Enter Credentials Manually</span>
@@ -1461,7 +1470,6 @@
                         <div className="tenant-info">
                             <span className="user-email">{session.user.email}</span>
                             <span className="status-badge active">✅ Active</span>
-                            <button className="btn-small-ghost" onClick={() => setShowCredentialForm(!showCredentialForm)}>{showCredentialForm ? 'Dashboard' : 'Update Creds'}</button>
                             <button className="btn-small-ghost" onClick={triggerDataCollection}>🚀 Collect Data</button>
                             <button className="btn-small-ghost" onClick={signOut}>Sign out</button>
                             <button className="btn-small-ghost" style={{color: '#dc2626'}} onClick={() => setShowUnsubscribePage(true)}>Unsubscribe</button>
