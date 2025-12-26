@@ -1120,10 +1120,9 @@
                     console.log('Session exists, calling Edge Function with token');
 
                     const verifier = sessionStorage.getItem('amz_code_verifier');
-                    const { data, error } = await window.supabaseClient.functions.invoke('amazon-oauth-exchange', {
-                        headers: {
-                            Authorization: `Bearer ${session.access_token}`,
-                        },
+
+                    // Use the supabase instance directly (not window.supabaseClient) to ensure session is included
+                    const { data, error } = await supabase.functions.invoke('amazon-oauth-exchange', {
                         body: {
                             code,
                             code_verifier: verifier,
