@@ -1234,6 +1234,62 @@
 
             const signOut = async () => { await supabase.auth.signOut(); };
 
+            const deleteAccount = async () => {
+                const confirmText = 'DELETE MY ACCOUNT';
+                const userInput = prompt(
+                    `⚠️ WARNING: This will permanently delete your account and all data.\n\n` +
+                    `This includes:\n` +
+                    `• Your Amazon Ads connection\n` +
+                    `• All stored credentials\n` +
+                    `• All campaign data\n\n` +
+                    `This action CANNOT be undone.\n\n` +
+                    `Type "${confirmText}" to confirm deletion:`
+                );
+
+                if (userInput !== confirmText) {
+                    if (userInput !== null) {
+                        alert('Account deletion cancelled.');
+                    }
+                    return;
+                }
+
+                setLoading(true);
+                try {
+                    const { data: { session } } = await supabase.auth.refreshSession();
+
+                    if (!session) {
+                        throw new Error('Session expired. Please sign in again.');
+                    }
+
+                    const { data, error } = await supabase.functions.invoke('delete-account');
+
+                    if (error) {
+                        let errorMsg = error.message;
+                        if (error.context && error.context instanceof Response) {
+                            try {
+                                const errorBody = await error.context.json();
+                                errorMsg = errorBody.error || errorMsg;
+                            } catch (e) {
+                                console.error('Failed to parse error response:', e);
+                            }
+                        }
+                        throw new Error(errorMsg);
+                    }
+
+                    if (data?.error) {
+                        throw new Error(data.error);
+                    }
+
+                    alert('✅ Your account has been permanently deleted.');
+                    window.location.reload();
+                } catch (error) {
+                    alert('❌ Error deleting account: ' + error.message);
+                    console.error('Delete account error:', error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
             const handleStoreCredentials = async (e) => {
                 e.preventDefault();
                 alert('Please use the "Authorize Amazon Account" button for secure automated setup.');
@@ -1327,6 +1383,7 @@
                         <div className="header">
                             <h2>Welcome, {session.user.email}!</h2>
                             <button className="btn-small-ghost" onClick={signOut}>Sign out</button>
+                            <button className="btn-small-ghost" style={{color: '#dc2626'}} onClick={deleteAccount}>Delete Account</button>
                         </div>
                         <div className="status-badge inactive">⚠️ Amazon Ads credentials required</div>
                         
@@ -1369,6 +1426,7 @@
                             <button className="btn-small-ghost" onClick={() => setShowCredentialForm(!showCredentialForm)}>{showCredentialForm ? 'Dashboard' : 'Update Creds'}</button>
                             <button className="btn-small-ghost" onClick={triggerDataCollection}>🚀 Collect Data</button>
                             <button className="btn-small-ghost" onClick={signOut}>Sign out</button>
+                            <button className="btn-small-ghost" style={{color: '#dc2626'}} onClick={deleteAccount}>Delete Account</button>
                         </div>
                     </div>
                     {showCredentialForm ? (
