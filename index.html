@@ -1041,20 +1041,83 @@
             const [authError, setAuthError] = useState(null);
 
             useEffect(() => {
-                supabase.auth.getSession().then(({ data: { session } }) => {
+                // Check for Amazon Auth Code in URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const amzCode = urlParams.get('code');
+                if (amzCode) {
+                    handleAmazonCallback(amzCode);
+                }
+
+                const checkUser = async () => {
+                    const { data: { user }, error } = await supabase.auth.getUser();
+                    
+                    if (error || !user) {
+                        setSession(null);
+                        setCredentials(null);
+                        await supabase.auth.signOut();
+                        setLoading(false);
+                        return;
+                    }
+
+                    const { data: { session } } = await supabase.auth.getSession();
                     setSession(session);
-                    if (session) fetchCredentials();
-                    else setLoading(false);
-                });
+                    if (session) await fetchCredentials();
+                    setLoading(false);
+                };
+
+                checkUser();
+                // ... rest of useEffect
                 const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-                    setSession(session);
-                    if (session) fetchCredentials();
-                    else { setCredentials(null); setLoading(false); }
+                    if (session) {
+                        setSession(session);
+                        fetchCredentials();
+                    } else {
+                        setSession(null);
+                        setCredentials(null);
+                        setLoading(false);
+                    }
                 });
                 return () => subscription.unsubscribe();
             }, []);
 
+            const handleAmazonCallback = async (code) => {
+                setLoading(true);
+                try {
+                    // Call the Edge Function to exchange code for tokens
+                    const { data, error } = await window.supabaseClient.functions.invoke('amazon-oauth-exchange', {
+                        body: { 
+                            code,
+                            redirect_uri: window.location.origin
+                        }
+                    });
+
+                    if (error) throw new Error(error.message);
+                    if (data.error) throw new Error(data.error);
+
+                    alert('✅ Amazon Authorization successful! Connected to profile: ' + (data.profile?.countryCode || 'US'));
+                    
+                    // Clear code from URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    await fetchCredentials();
+                } catch (error) {
+                    alert('❌ Error exchanging Amazon code: ' + error.message);
+                    console.error(error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const authorizeAmazon = () => {
+                const clientId = 'amzn1.application-oa2-client.3bfbe7fd974d4a8f96d30372640e2701'; // APP_ADS_CLIENT_ID
+                const redirectUri = window.location.origin;
+                const scope = 'advertising::campaign_management';
+                const authUrl = `https://www.amazon.com/ap/oa?client_id=${clientId}&scope=${scope}&response_type=code&redirect_uri=${redirectUri}`;
+                
+                window.location.href = authUrl;
+            };
+
             const fetchCredentials = async () => {
+                // ... existing fetchCredentials ...
                 try {
                     const { data, error } = await supabase.from('credentials').select('*').maybeSingle();
                     setCredentials(data);
@@ -1191,13 +1254,33 @@
                             <button className="btn-small-ghost" onClick={signOut}>Sign out</button>
                         </div>
                         <div className="status-badge inactive">⚠️ Amazon Ads credentials required</div>
-                        <form onSubmit={handleStoreCredentials} className="credential-form">
-                            <div className="form-group"><label>Client ID</label><input type="text" value={formData.clientId} onChange={(e) => setFormData({...formData, clientId: e.target.value})} required /></div>
-                            <div className="form-group"><label>Client Secret</label><input type="password" value={formData.clientSecret} onChange={(e) => setFormData({...formData, clientSecret: e.target.value})} required /></div>
-                            <div className="form-group"><label>Refresh Token</label><input type="password" value={formData.refreshToken} onChange={(e) => setFormData({...formData, refreshToken: e.target.value})} required /></div>
-                            <div className="form-group"><label>Profile ID</label><input type="text" value={formData.profileId} onChange={(e) => setFormData({...formData, profileId: e.target.value})} required /></div>
-                            <button type="submit" className="btn-primary">Save Credentials</button>
-                        </form>
+                        
+                        {!showCredentialForm ? (
+                            <div className="setup-prompt" style={{textAlign: 'center', padding: '1rem 0'}}>
+                                <p style={{color: 'var(--text-secondary)', marginBottom: '1.5rem'}}>To use BidFlow, you need to connect your Amazon Advertising account.</p>
+                                <button
+                                    className="btn-primary"
+                                    onClick={authorizeAmazon}
+                                    style={{marginBottom: '1rem'}}
+                                >
+                                    🔑 Authorize Amazon Account
+                                </button>
+                                <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>
+                                    OR <span onClick={() => setShowCredentialForm(true)} style={{textDecoration: 'underline', cursor: 'pointer', color: 'var(--accent-primary)'}}>Enter Credentials Manually</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleStoreCredentials} className="credential-form">
+                                <div className="form-group"><label>Client ID</label><input type="text" value={formData.clientId} onChange={(e) => setFormData({...formData, clientId: e.target.value})} required /></div>
+                                <div className="form-group"><label>Client Secret</label><input type="password" value={formData.clientSecret} onChange={(e) => setFormData({...formData, clientSecret: e.target.value})} required /></div>
+                                <div className="form-group"><label>Refresh Token</label><input type="password" value={formData.refreshToken} onChange={(e) => setFormData({...formData, refreshToken: e.target.value})} required /></div>
+                                <div className="form-group"><label>Profile ID</label><input type="text" value={formData.profileId} onChange={(e) => setFormData({...formData, profileId: e.target.value})} required /></div>
+                                <button type="submit" className="btn-primary">Save Credentials</button>
+                                <div style={{textAlign: 'center', marginTop: '1rem'}}>
+                                    <span onClick={() => setShowCredentialForm(false)} style={{fontSize: '0.8rem', textDecoration: 'underline', cursor: 'pointer', color: 'var(--text-secondary)'}}>Back to OAuth</span>
+                                </div>
+                            </form>
+                        )}
                     </div>
                 </div>
             );
