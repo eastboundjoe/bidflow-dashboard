@@ -1112,23 +1112,31 @@
                 try {
                     const verifier = sessionStorage.getItem('amz_code_verifier');
                     const { data, error } = await window.supabaseClient.functions.invoke('amazon-oauth-exchange', {
-                        body: { 
+                        body: {
                             code,
                             code_verifier: verifier,
                             redirect_uri: window.location.origin + '/'
                         }
                     });
 
-                    if (error) throw new Error(error.message);
-                    if (data.error) throw new Error(data.error);
+                    console.log('Edge Function response:', { data, error });
+
+                    if (error) {
+                        // Show the actual error from the response
+                        const errorMsg = error.message || JSON.stringify(error);
+                        throw new Error(errorMsg);
+                    }
+                    if (data?.error) {
+                        throw new Error(data.error);
+                    }
 
                     alert('✅ Amazon Authorization successful! Connected to profile: ' + (data.profile?.countryCode || 'US'));
-                    
+
                     window.history.replaceState({}, document.title, window.location.pathname);
                     await fetchCredentials();
                 } catch (error) {
                     alert('❌ Error exchanging Amazon code: ' + error.message);
-                    console.error(error);
+                    console.error('Full error details:', error);
                 } finally {
                     setLoading(false);
                 }
