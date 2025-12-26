@@ -1068,16 +1068,9 @@
             };
 
             useEffect(() => {
-                // Check for Amazon Auth Code in URL
-                const urlParams = new URLSearchParams(window.location.search);
-                const amzCode = urlParams.get('code');
-                if (amzCode) {
-                    handleAmazonCallback(amzCode);
-                }
-
                 const checkUser = async () => {
                     const { data: { user }, error } = await supabase.auth.getUser();
-                    
+
                     if (error || !user) {
                         setSession(null);
                         setCredentials(null);
@@ -1090,6 +1083,13 @@
                     setSession(session);
                     if (session) await fetchCredentials();
                     setLoading(false);
+
+                    // Check for Amazon Auth Code in URL AFTER session is confirmed
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const amzCode = urlParams.get('code');
+                    if (amzCode && session) {
+                        handleAmazonCallback(amzCode);
+                    }
                 };
 
                 checkUser();
