@@ -1110,18 +1110,24 @@
             const handleAmazonCallback = async (code) => {
                 setLoading(true);
                 try {
-                    // Get the current session to ensure we have a valid access token
-                    const { data: { session } } = await supabase.auth.getSession();
+                    // Refresh the session to get a fresh access token
+                    console.log('Refreshing session to get fresh token...');
+                    const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+
+                    if (sessionError) {
+                        console.error('Session refresh error:', sessionError);
+                        throw new Error('Failed to refresh session. Please sign in again.');
+                    }
 
                     if (!session) {
                         throw new Error('No active session. Please sign in again.');
                     }
 
-                    console.log('Session exists, calling Edge Function with token');
+                    console.log('Session refreshed successfully, calling Edge Function');
 
                     const verifier = sessionStorage.getItem('amz_code_verifier');
 
-                    // Use the supabase instance directly (not window.supabaseClient) to ensure session is included
+                    // Use the supabase instance directly - it will use the refreshed session automatically
                     const { data, error } = await supabase.functions.invoke('amazon-oauth-exchange', {
                         body: {
                             code,
