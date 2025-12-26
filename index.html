@@ -1035,6 +1035,7 @@
             const [showUnsubscribePage, setShowUnsubscribePage] = useState(false);
             const [authorizingAmazon, setAuthorizingAmazon] = useState(false);
             const [formData, setFormData] = useState({ clientId: '', clientSecret: '', refreshToken: '', profileId: '' });
+            const [successMessage, setSuccessMessage] = useState(null);
 
             // Email Auth State
             const [email, setEmail] = useState('');
@@ -1109,6 +1110,14 @@
                 return () => subscription.unsubscribe();
             }, []);
 
+            // Auto-clear success message after 5 seconds
+            useEffect(() => {
+                if (successMessage) {
+                    const timer = setTimeout(() => setSuccessMessage(null), 5000);
+                    return () => clearTimeout(timer);
+                }
+            }, [successMessage]);
+
             const handleAmazonCallback = async (code) => {
                 setLoading(true);
                 try {
@@ -1158,7 +1167,7 @@
                         throw new Error(data.error);
                     }
 
-                    alert('✅ Amazon Authorization successful! Connected to profile: ' + (data.profile?.countryCode || 'US'));
+                    setSuccessMessage('✅ Amazon Authorization successful! Connected to profile: ' + (data.profile?.countryCode || 'US'));
 
                     window.history.replaceState({}, document.title, window.location.pathname);
                     await fetchCredentials();
@@ -1266,8 +1275,8 @@
                         throw new Error(data.error);
                     }
 
-                    alert('✅ You have been unsubscribed. All your data has been permanently deleted.');
-                    window.location.reload();
+                    setSuccessMessage('✅ You have been unsubscribed. All your data has been permanently deleted.');
+                    setTimeout(() => window.location.reload(), 2000);
                 } catch (error) {
                     alert('❌ Error unsubscribing: ' + error.message);
                     console.error('Unsubscribe error:', error);
@@ -1316,6 +1325,21 @@
                 <div className="auth-container">
                     <div className="auth-card" style={{maxWidth: '600px'}}>
                         <h2 style={{color: '#dc2626', marginBottom: '1.5rem'}}>⚠️ Unsubscribe from BidFlow</h2>
+
+                        {successMessage && (
+                            <div style={{
+                                background: 'linear-gradient(135deg, #00ff94 0%, #00cc75 100%)',
+                                color: '#001a0f',
+                                padding: '1rem',
+                                borderRadius: '8px',
+                                marginBottom: '1.5rem',
+                                fontWeight: '500',
+                                textAlign: 'center',
+                                boxShadow: '0 4px 12px rgba(0, 255, 148, 0.3)'
+                            }}>
+                                {successMessage}
+                            </div>
+                        )}
 
                         <div style={{textAlign: 'left', marginBottom: '2rem'}}>
                             <p style={{marginBottom: '1.5rem', fontSize: '1.1rem'}}>
@@ -1424,8 +1448,22 @@
                         <div className="header">
                             <h2>Welcome, {session.user.email}!</h2>
                         </div>
+                        {successMessage && (
+                            <div style={{
+                                background: 'linear-gradient(135deg, #00ff94 0%, #00cc75 100%)',
+                                color: '#001a0f',
+                                padding: '1rem',
+                                borderRadius: '8px',
+                                marginBottom: '1rem',
+                                fontWeight: '500',
+                                textAlign: 'center',
+                                boxShadow: '0 4px 12px rgba(0, 255, 148, 0.3)'
+                            }}>
+                                {successMessage}
+                            </div>
+                        )}
                         <div className="status-badge inactive">⚠️ Amazon Ads credentials required</div>
-                        
+
                         {!showCredentialForm ? (
                             <div className="setup-prompt" style={{textAlign: 'center', padding: '1rem 0'}}>
                                 <p style={{color: 'var(--text-secondary)', marginBottom: '1.5rem'}}>To use BidFlow, you need to connect your Amazon Advertising account.</p>
