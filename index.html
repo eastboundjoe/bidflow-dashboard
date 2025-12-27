@@ -1631,6 +1631,7 @@
             if (!credentials || credentials.status === 'inactive') return (
                 <>
                     {authorizingAmazon && <AmazonAuthLoadingOverlay />}
+                    {showPricingModal && <PricingModal />}
                     <div className="credentials-setup">
                     <div className="setup-card">
                         <div className="header">
