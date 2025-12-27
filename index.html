@@ -1650,41 +1650,63 @@
                                 {successMessage}
                             </div>
                         )}
-                        <div className="status-badge inactive">⚠️ Amazon Ads credentials required</div>
-
-                        {!showCredentialForm ? (
-                            <div className="setup-prompt" style={{textAlign: 'center', padding: '1rem 0'}}>
-                                <p style={{color: 'var(--text-secondary)', marginBottom: '1.5rem'}}>To use BidFlow, you need to connect your Amazon Advertising account.</p>
+                        {/* Check if user needs to subscribe first */}
+                        {!subscriptionStatus || (subscriptionStatus.subscription_tier === 'free' && subscriptionStatus.subscription_status !== 'active') ? (
+                            <div className="setup-prompt" style={{textAlign: 'center', padding: '2rem 0'}}>
+                                <div style={{fontSize: '2rem', marginBottom: '1rem'}}>🚀</div>
+                                <h3 style={{marginBottom: '1rem'}}>Choose Your Plan to Get Started</h3>
+                                <p style={{color: 'var(--text-secondary)', marginBottom: '2rem'}}>
+                                    Select a plan to unlock BidFlow and connect your Amazon Advertising account.
+                                </p>
                                 <button
                                     className="btn-primary"
-                                    onClick={authorizeAmazon}
+                                    onClick={() => setShowPricingModal(true)}
                                     style={{marginBottom: '1rem'}}
-                                    disabled={authorizingAmazon}
                                 >
-                                    {authorizingAmazon ? (
-                                        <>
-                                            <div className="spinner" style={{width: '16px', height: '16px', marginRight: '8px'}}></div>
-                                            Connecting to Amazon...
-                                        </>
-                                    ) : (
-                                        '🔑 Authorize Amazon Account'
-                                    )}
+                                    View Plans & Start Free Trial
                                 </button>
-                                <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>
-                                    OR <span onClick={() => setShowCredentialForm(true)} style={{textDecoration: 'underline', cursor: 'pointer', color: 'var(--accent-primary)'}}>Enter Credentials Manually</span>
-                                </div>
+                                <p style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}>
+                                    30-day free trial • No credit card required
+                                </p>
                             </div>
                         ) : (
-                            <form onSubmit={handleStoreCredentials} className="credential-form">
-                                <div className="form-group"><label>Client ID</label><input type="text" value={formData.clientId} onChange={(e) => setFormData({...formData, clientId: e.target.value})} required /></div>
-                                <div className="form-group"><label>Client Secret</label><input type="password" value={formData.clientSecret} onChange={(e) => setFormData({...formData, clientSecret: e.target.value})} required /></div>
-                                <div className="form-group"><label>Refresh Token</label><input type="password" value={formData.refreshToken} onChange={(e) => setFormData({...formData, refreshToken: e.target.value})} required /></div>
-                                <div className="form-group"><label>Profile ID</label><input type="text" value={formData.profileId} onChange={(e) => setFormData({...formData, profileId: e.target.value})} required /></div>
-                                <button type="submit" className="btn-primary">Save Credentials</button>
-                                <div style={{textAlign: 'center', marginTop: '1rem'}}>
-                                    <span onClick={() => setShowCredentialForm(false)} style={{fontSize: '0.8rem', textDecoration: 'underline', cursor: 'pointer', color: 'var(--text-secondary)'}}>Back to OAuth</span>
-                                </div>
-                            </form>
+                            <>
+                                <div className="status-badge inactive">⚠️ Amazon Ads credentials required</div>
+                                {!showCredentialForm ? (
+                                    <div className="setup-prompt" style={{textAlign: 'center', padding: '1rem 0'}}>
+                                        <p style={{color: 'var(--text-secondary)', marginBottom: '1.5rem'}}>To use BidFlow, you need to connect your Amazon Advertising account.</p>
+                                        <button
+                                            className="btn-primary"
+                                            onClick={authorizeAmazon}
+                                            style={{marginBottom: '1rem'}}
+                                            disabled={authorizingAmazon}
+                                        >
+                                            {authorizingAmazon ? (
+                                                <>
+                                                    <div className="spinner" style={{width: '16px', height: '16px', marginRight: '8px'}}></div>
+                                                    Connecting to Amazon...
+                                                </>
+                                            ) : (
+                                                '🔑 Authorize Amazon Account'
+                                            )}
+                                        </button>
+                                        <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>
+                                            OR <span onClick={() => setShowCredentialForm(true)} style={{textDecoration: 'underline', cursor: 'pointer', color: 'var(--accent-primary)'}}>Enter Credentials Manually</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <form onSubmit={handleStoreCredentials} className="credential-form">
+                                        <div className="form-group"><label>Client ID</label><input type="text" value={formData.clientId} onChange={(e) => setFormData({...formData, clientId: e.target.value})} required /></div>
+                                        <div className="form-group"><label>Client Secret</label><input type="password" value={formData.clientSecret} onChange={(e) => setFormData({...formData, clientSecret: e.target.value})} required /></div>
+                                        <div className="form-group"><label>Refresh Token</label><input type="password" value={formData.refreshToken} onChange={(e) => setFormData({...formData, refreshToken: e.target.value})} required /></div>
+                                        <div className="form-group"><label>Profile ID</label><input type="text" value={formData.profileId} onChange={(e) => setFormData({...formData, profileId: e.target.value})} required /></div>
+                                        <button type="submit" className="btn-primary">Save Credentials</button>
+                                        <div style={{textAlign: 'center', marginTop: '1rem'}}>
+                                            <span onClick={() => setShowCredentialForm(false)} style={{fontSize: '0.8rem', textDecoration: 'underline', cursor: 'pointer', color: 'var(--text-secondary)'}}>Back to OAuth</span>
+                                        </div>
+                                    </form>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
@@ -1701,6 +1723,10 @@
                             {subscriptionStatus?.subscription_tier && (
                                 <span className="status-badge active" style={{background: subscriptionStatus.subscription_tier === 'pro' ? 'var(--accent-primary)' : subscriptionStatus.subscription_tier === 'enterprise' ? '#fbbf24' : 'var(--bg-hover)', color: subscriptionStatus.subscription_tier === 'free' ? 'var(--text-secondary)' : '#001a0f'}}>
                                     {subscriptionStatus.subscription_tier === 'free' ? '✨ Free' : subscriptionStatus.subscription_tier === 'pro' ? '⚡ Pro' : '🚀 Enterprise'}
+                                    {subscriptionStatus.subscription_status === 'trialing' && subscriptionStatus.trial_ends_at && (() => {
+                                        const daysLeft = Math.ceil((new Date(subscriptionStatus.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24));
+                                        return daysLeft > 0 ? ` (${daysLeft} days left)` : '';
+                                    })()}
                                 </span>
                             )}
                             {(!subscriptionStatus || subscriptionStatus.subscription_tier === 'free' || subscriptionStatus.subscription_status === 'trialing') && (
