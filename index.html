@@ -1358,6 +1358,19 @@
                         throw new Error('Session expired. Please sign in again.');
                     }
 
+                    // First, cancel any active Stripe subscription
+                    console.log('Canceling Stripe subscription...');
+                    const { data: cancelData, error: cancelError } = await supabase.functions.invoke('cancel-subscription');
+
+                    if (cancelError) {
+                        console.error('Error canceling subscription:', cancelError);
+                        // Continue with account deletion even if subscription cancellation fails
+                    } else if (cancelData?.canceled) {
+                        console.log('Stripe subscription canceled successfully');
+                    }
+
+                    // Then delete the account and all data
+                    console.log('Deleting account...');
                     const { data, error } = await supabase.functions.invoke('delete-account');
 
                     if (error) {
@@ -1527,8 +1540,9 @@
                             </p>
 
                             <div style={{background: 'var(--bg-hover)', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem'}}>
-                                <h3 style={{marginBottom: '1rem', fontSize: '1rem'}}>What will be deleted:</h3>
+                                <h3 style={{marginBottom: '1rem', fontSize: '1rem'}}>What will happen:</h3>
                                 <ul style={{listStyle: 'none', padding: 0}}>
+                                    <li style={{marginBottom: '0.75rem'}}>✗ Your Stripe subscription will be canceled (if active)</li>
                                     <li style={{marginBottom: '0.75rem'}}>✗ Your Amazon Advertising account connection</li>
                                     <li style={{marginBottom: '0.75rem'}}>✗ All stored credentials (Client ID, Client Secret, Refresh Token)</li>
                                     <li style={{marginBottom: '0.75rem'}}>✗ All campaign and placement data</li>
