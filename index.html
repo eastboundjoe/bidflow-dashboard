@@ -1099,6 +1099,8 @@
             const [authorizingAmazon, setAuthorizingAmazon] = useState(false);
             const [formData, setFormData] = useState({ clientId: '', clientSecret: '', refreshToken: '', profileId: '' });
             const [successMessage, setSuccessMessage] = useState(null);
+            const [showPricingModal, setShowPricingModal] = useState(false);
+            const [subscriptionStatus, setSubscriptionStatus] = useState(null);
 
             // Email Auth State
             const [email, setEmail] = useState('');
@@ -1276,8 +1278,32 @@
                 try {
                     const { data, error } = await supabase.from('credentials').select('*').maybeSingle();
                     setCredentials(data);
+
+                    // Also fetch subscription status
+                    const { data: tenantData } = await supabase.from('tenants').select('subscription_status, subscription_tier, trial_ends_at, current_period_end').eq('id', session?.user?.id).maybeSingle();
+                    setSubscriptionStatus(tenantData);
                 } catch (error) { console.error('Error fetching credentials:', error); }
                 finally { setLoading(false); }
+            };
+
+            const handleUpgrade = async (tier, priceId) => {
+                setLoading(true);
+                try {
+                    const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+                        body: { tier, priceId }
+                    });
+
+                    if (error) throw error;
+                    if (data?.error) throw new Error(data.error);
+
+                    // Redirect to Stripe Checkout
+                    window.location.href = data.url;
+                } catch (error) {
+                    alert('❌ Error creating checkout session: ' + error.message);
+                    console.error('Checkout error:', error);
+                } finally {
+                    setLoading(false);
+                }
             };
 
             const signInWithGoogle = async () => {
@@ -1399,6 +1425,69 @@
                         <p>Please wait while we securely connect your Amazon Advertising account...</p>
                         <div className="progress-bar-container">
                             <div className="progress-bar-fill"></div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // Pricing Modal Component
+            const PricingModal = () => (
+                <div className="amazon-auth-loading-overlay" onClick={() => setShowPricingModal(false)}>
+                    <div className="auth-card" style={{maxWidth: '900px', margin: '2rem'}} onClick={(e) => e.stopPropagation()}>
+                        <h2 style={{textAlign: 'center', marginBottom: '2rem'}}>Choose Your Plan</h2>
+                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem'}}>
+
+                            {/* Free Plan */}
+                            <div style={{border: '1px solid var(--border)', borderRadius: '12px', padding: '2rem', textAlign: 'center'}}>
+                                <h3 style={{color: 'var(--text-secondary)', marginBottom: '1rem'}}>Free</h3>
+                                <div style={{fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '0.5rem'}}>$0</div>
+                                <div style={{color: 'var(--text-secondary)', marginBottom: '2rem'}}>per month</div>
+                                <ul style={{textAlign: 'left', listStyle: 'none', padding: 0, marginBottom: '2rem'}}>
+                                    <li style={{marginBottom: '0.75rem'}}>✓ Last 7 days of data</li>
+                                    <li style={{marginBottom: '0.75rem'}}>✓ 1 Amazon Ads account</li>
+                                    <li style={{marginBottom: '0.75rem'}}>✓ Basic reporting</li>
+                                </ul>
+                                <button className="btn-primary" disabled style={{opacity: 0.5, cursor: 'not-allowed'}}>Current Plan</button>
+                            </div>
+
+                            {/* Pro Plan */}
+                            <div style={{border: '2px solid var(--accent-primary)', borderRadius: '12px', padding: '2rem', textAlign: 'center', position: 'relative', background: 'linear-gradient(135deg, rgba(0, 255, 148, 0.05), rgba(0, 204, 117, 0.05))'}}>
+                                <div style={{position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: 'var(--accent-primary)', color: '#001a0f', padding: '0.25rem 1rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold'}}>POPULAR</div>
+                                <h3 style={{color: 'var(--accent-primary)', marginBottom: '1rem'}}>Pro</h3>
+                                <div style={{fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '0.5rem'}}>$29</div>
+                                <div style={{color: 'var(--text-secondary)', marginBottom: '2rem'}}>per month</div>
+                                <ul style={{textAlign: 'left', listStyle: 'none', padding: 0, marginBottom: '2rem'}}>
+                                    <li style={{marginBottom: '0.75rem'}}>✓ Last 90 days of data</li>
+                                    <li style={{marginBottom: '0.75rem'}}>✓ Unlimited Amazon Ads accounts</li>
+                                    <li style={{marginBottom: '0.75rem'}}>✓ Weekly automated reports</li>
+                                    <li style={{marginBottom: '0.75rem'}}>✓ Advanced analytics</li>
+                                    <li style={{marginBottom: '0.75rem'}}>✓ 14-day free trial</li>
+                                </ul>
+                                <button className="btn-primary" onClick={() => handleUpgrade('pro', 'price_REPLACE_WITH_STRIPE_PRICE_ID')} disabled={loading}>
+                                    {loading ? 'Processing...' : 'Start Free Trial'}
+                                </button>
+                            </div>
+
+                            {/* Enterprise Plan */}
+                            <div style={{border: '1px solid var(--border)', borderRadius: '12px', padding: '2rem', textAlign: 'center'}}>
+                                <h3 style={{marginBottom: '1rem'}}>Enterprise</h3>
+                                <div style={{fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '0.5rem'}}>$99</div>
+                                <div style={{color: 'var(--text-secondary)', marginBottom: '2rem'}}>per month</div>
+                                <ul style={{textAlign: 'left', listStyle: 'none', padding: 0, marginBottom: '2rem'}}>
+                                    <li style={{marginBottom: '0.75rem'}}>✓ Unlimited historical data</li>
+                                    <li style={{marginBottom: '0.75rem'}}>✓ Unlimited Amazon Ads accounts</li>
+                                    <li style={{marginBottom: '0.75rem'}}>✓ Daily automated reports</li>
+                                    <li style={{marginBottom: '0.75rem'}}>✓ Priority support</li>
+                                    <li style={{marginBottom: '0.75rem'}}>✓ Custom integrations</li>
+                                    <li style={{marginBottom: '0.75rem'}}>✓ 14-day free trial</li>
+                                </ul>
+                                <button className="btn-primary" onClick={() => handleUpgrade('enterprise', 'price_REPLACE_WITH_STRIPE_ENTERPRISE_PRICE_ID')} disabled={loading}>
+                                    {loading ? 'Processing...' : 'Start Free Trial'}
+                                </button>
+                            </div>
+                        </div>
+                        <div style={{textAlign: 'center', marginTop: '2rem'}}>
+                            <button className="btn-small-ghost" onClick={() => setShowPricingModal(false)}>Close</button>
                         </div>
                     </div>
                 </div>
@@ -1597,10 +1686,18 @@
             return (
                 <>
                     {authorizingAmazon && <AmazonAuthLoadingOverlay />}
+                    {showPricingModal && <PricingModal />}
                     <div className="tenant-header-bar">
                         <div className="tenant-info">
                             <span className="user-email">{session.user.email}</span>
-                            <span className="status-badge active">✅ Active</span>
+                            {subscriptionStatus?.subscription_tier && (
+                                <span className="status-badge active" style={{background: subscriptionStatus.subscription_tier === 'pro' ? 'var(--accent-primary)' : subscriptionStatus.subscription_tier === 'enterprise' ? '#fbbf24' : 'var(--bg-hover)', color: subscriptionStatus.subscription_tier === 'free' ? 'var(--text-secondary)' : '#001a0f'}}>
+                                    {subscriptionStatus.subscription_tier === 'free' ? '✨ Free' : subscriptionStatus.subscription_tier === 'pro' ? '⚡ Pro' : '🚀 Enterprise'}
+                                </span>
+                            )}
+                            {(!subscriptionStatus || subscriptionStatus.subscription_tier === 'free' || subscriptionStatus.subscription_status === 'trialing') && (
+                                <button className="btn-small-ghost" style={{background: 'var(--accent-primary)', color: '#001a0f'}} onClick={() => setShowPricingModal(true)}>⬆️ Upgrade</button>
+                            )}
                             <button className="btn-small-ghost" onClick={triggerDataCollection}>🚀 Collect Data</button>
                             <button className="btn-small-ghost" onClick={signOut}>Sign out</button>
                             <button className="btn-small-ghost" style={{color: '#dc2626'}} onClick={() => setShowUnsubscribePage(true)}>Unsubscribe</button>
